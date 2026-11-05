@@ -488,3 +488,51 @@ Selenium raises `StaleElementReferenceError`. The reads are now
 `assert_row_amounts` / `assert_row_percentages` in `ApplicationSystemTestCase`, built on
 `assert_selector ... text:`, which retries the whole match. The suite was run three times in a
 row to confirm the flakiness is gone rather than hiding.
+
+## Step 7 — Share page and "I paid"
+
+### The share link has no owner check, on purpose
+
+`SharesController` and `PaymentsController` look a split up by `share_token` and stop there.
+Everywhere else in the app a lookup is scoped to the organizer's cookie; here the token *is*
+the credential. That is the whole feature: a friend with the link needs no account.
+
+What keeps it safe is that `has_secure_token` generates 24 random base58 characters, and the
+route is `/s/:share_token` rather than anything derived from the id. There is a test that
+opening `/s/<id>` is a 404, because a share link that could be guessed from a number would not
+be a credential at all.
+
+### A payment token is scoped to its own split
+
+`PaymentsController` finds the participant through `@split.participants`, not through
+`Participant`. One split's share link therefore cannot mark somebody on another split paid,
+which it could if the participant id were looked up globally. There is a test for it.
+
+### Paying twice is not an error
+
+Two friends tapping the same row in a group chat is ordinary. The second tap is ignored rather
+than refused, and it does not move `paid_at`. Reporting a conflict would be telling the truth
+about the database and the wrong thing about the situation.
+
+### Paid and unpaid are told apart by the row, not by a badge
+
+The design constraints rule out chips, pills and badges. A paid row mutes and strikes through
+the amount and says when it was paid; an unpaid row offers the button. Nothing depends on
+colour alone, so it survives a greyscale screen and a colour-blind reader.
+
+### The organizer's page reports, it does not act
+
+`splits#show` renders the same row partial with `payable: false`. Marking somebody paid is
+something that person does on their own share link, so the organizer's page says "Unpaid"
+rather than offering a button that would speak for them.
+
+### The copy button never claims a copy that did not happen
+
+The share link sits in a real, readonly, selectable input. `CopyLinkLogic` tries
+`navigator.clipboard`, falls back to `execCommand`, and if both fail says "Press ⌘C or Ctrl+C
+to copy" instead of "Link copied."
+
+**Why it matters:** the clipboard API needs a secure context and can be refused. A confirmation
+that appears regardless is worse than no confirmation, because the organizer pastes nothing
+into the group chat and does not know why. The input means the feature works with the
+JavaScript switched off entirely.

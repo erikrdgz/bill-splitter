@@ -22,7 +22,9 @@
       <span class="text-sm tabular-nums text-black/60" data-split-logic-target="percentage">
         <%= number_with_precision(participant.percentage, precision: 1) %>%
       </span>
-      <span class="w-20 text-right font-medium tabular-nums" data-split-logic-target="amount">
+      <span class="w-20 text-right font-medium tabular-nums"
+            data-split-logic-target="amount"
+            data-row-amount>
         <%= money(participant.amount_cents) %>
       </span>
 

@@ -1,6 +1,6 @@
 class SplitsController < ApplicationController
   before_action :set_quick_split_limits, only: %i[new create]
-  before_action :set_split, only: %i[edit update]
+  before_action :set_split, only: %i[show edit update]
 
   # The quick split screen. It touches no database: the organizer has not asked
   # us to remember anything yet, so there is nothing to save and nothing to look
@@ -30,6 +30,11 @@ class SplitsController < ApplicationController
       @people_count = submitted_people_count
       render :new, status: :unprocessable_entity
     end
+  end
+
+  # The organizer's own view of a split: who has paid, what is still owed, and
+  # the link to hand around.
+  def show
   end
 
   def edit

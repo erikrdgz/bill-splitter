@@ -1,0 +1,40 @@
+<%# One person on the share page, or on the organizer's detail page.
+
+    The spec rules out chips, pills and badges, so paid and unpaid are told
+    apart by the row itself: a paid row's amount is struck through and muted,
+    and it says when it was paid instead of offering a button. Nothing here
+    relies on colour alone.
+
+    `payable` is false on the organizer's own page, where the rows are a report
+    rather than something to act on. %>
+<li id="<%= dom_id(participant) %>"
+    class="flex items-baseline justify-between gap-3 border-t border-black/20 py-3">
+  <span class="<%= "text-black/50" if participant.paid? %>">
+    <%= participant.display_name %>
+  </span>
+
+  <span class="flex shrink-0 items-baseline gap-3">
+    <span class="font-medium tabular-nums <%= "text-black/50 line-through" if participant.paid? %>"
+          data-row-amount>
+      <%= money(participant.amount_cents) %>
+    </span>
+
+    <% if participant.paid? %>
+      <span class="w-24 text-right text-sm text-black/60">
+        Paid <%= participant.paid_at.to_date.strftime("%b %-d") %>
+      </span>
+    <% elsif payable %>
+      <%= button_to "I paid",
+                    share_payment_path(split.share_token, participant),
+                    class: "w-24 border-2 border-black px-2 py-1 text-sm font-medium",
+                    form: {
+                      data: {
+                        turbo_confirm: "Mark #{participant.display_name} as paid? " \
+                                       "This cannot be undone here."
+                      }
+                    } %>
+    <% else %>
+      <span class="w-24 text-right text-sm text-black/60">Unpaid</span>
+    <% end %>
+  </span>
+</li>

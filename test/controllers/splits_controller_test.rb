@@ -208,6 +208,44 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 10_000, split.reload.total_cents
   end
 
+  # The organizer's own view of a split.
+
+  test "the detail page shows who has paid and what is still owed" do
+    split = create_split(amount: "100", people_count: 3)
+    split.participants.first.update!(paid_at: Time.current)
+
+    get split_url(split)
+
+    assert_response :success
+    assert_select "ol#participants > li", 3
+    assert_select "#owed", text: /\$66\.66/
+  end
+
+  # Marking somebody paid is something they do on their own share link.
+  test "the detail page reports rather than offering to mark people paid" do
+    split = create_split(amount: "100", people_count: 3)
+
+    get split_url(split)
+
+    assert_select "button", text: "I paid", count: 0
+    assert_select "ol#participants > li", text: /Unpaid/
+  end
+
+  test "the detail page offers the share link to copy" do
+    split = create_split(amount: "100", people_count: 3)
+
+    get split_url(split)
+
+    assert_select "input[readonly][value=?]", share_url(split.share_token)
+    assert_select "[data-controller=copy-link-logic]"
+  end
+
+  test "a browser with a different owner cookie cannot see someone else's detail page" do
+    get split_url(splits(:stranger_brunch))
+
+    assert_response :not_found
+  end
+
   # Custom mode.
 
   test "a split starts in even mode and can be switched to custom" do

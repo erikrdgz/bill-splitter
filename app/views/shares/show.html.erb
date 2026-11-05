@@ -1,0 +1,25 @@
+<% content_for :title, @split.title %>
+
+<h1 class="text-2xl font-semibold tracking-tight"><%= @split.title %></h1>
+
+<p class="mt-2 flex items-baseline justify-between text-lg">
+  <span>Total</span>
+  <span class="font-medium tabular-nums"><%= money(@split.total_cents) %></span>
+</p>
+
+<section class="mt-8">
+  <h2 class="font-medium">Who owes what</h2>
+
+  <ol id="participants" class="mt-2">
+    <%= render partial: "payments/payment_row",
+               collection: @split.participants,
+               as: :participant,
+               locals: { split: @split, payable: true } %>
+  </ol>
+
+  <%= render "shares/owed", split: @split %>
+</section>
+
+<p class="mt-8 text-sm text-black/60">
+  Tap "I paid" on your own row. No account needed.
+</p>

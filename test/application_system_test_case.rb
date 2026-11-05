@@ -35,7 +35,11 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
     end
   end
 
+  # data-row-amount rather than the Stimulus target, so the same assertion works
+  # on the editor, the share page and the organizer's detail page.
   def row_selector(index, target)
-    "ol#participants > li:nth-of-type(#{index + 1}) [data-split-logic-target='#{target}']"
+    hook = target == "amount" ? "[data-row-amount]" : "[data-split-logic-target='#{target}']"
+
+    "ol#participants > li:nth-of-type(#{index + 1}) #{hook}"
   end
 end
