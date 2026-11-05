@@ -3,7 +3,7 @@
 <h1 class="text-2xl font-semibold tracking-tight"><%= @split.title %></h1>
 
 <p class="mt-2 flex items-baseline justify-between text-lg">
-  <span>Total</span>
+  <span>Total bill</span>
   <span class="font-medium tabular-nums"><%= money(@split.total_cents) %></span>
 </p>
 
@@ -16,13 +16,54 @@
     <%= render partial: "payments/payment_row",
                collection: @split.participants,
                as: :participant,
-               locals: { split: @split, payable: false } %>
+               locals: { split: @split, payable: false, payment_profile: nil } %>
   </ol>
 
   <%= render "shares/owed", split: @split %>
 </section>
 
-<section class="mt-10" data-controller="copy-link-logic">
+<% unless @split.fully_paid? %>
+  <section class="mt-10">
+    <h2 class="font-medium">Ask for the money</h2>
+    <p class="mt-1 text-sm text-black/70">
+      Venmo opens with the amount already filled in. The others cannot carry a
+      request from a web page, so they are shown as demonstrations.
+    </p>
+
+    <ol class="mt-2" id="requests">
+      <%= render partial: "payments/request_row",
+                 collection: @split.participants.reject(&:paid?),
+                 as: :participant,
+                 locals: { split: @split } %>
+    </ol>
+
+    <%# The way a bill actually gets settled: one message in the group chat. %>
+    <div class="mt-6" data-controller="copy-logic">
+      <h3 class="font-medium">Send it all at once</h3>
+      <p class="mt-1 text-sm text-black/70">
+        One message with everyone's share, to paste into the group chat.
+      </p>
+
+      <textarea readonly
+                rows="5"
+                aria-label="Every request as one message"
+                class="mt-2 w-full border-2 border-black px-2 py-2 text-sm"
+                data-copy-logic-target="source"
+                data-action="focus->copy-logic#selectAll"><%= payment_request_message(@split) %></textarea>
+
+      <button type="button"
+              class="mt-2 w-full border-2 border-black px-4 py-2 text-sm font-medium"
+              data-action="copy-logic#copy">Copy the message</button>
+
+      <p class="mt-2 text-sm" role="status"
+         data-copy-logic-target="confirmation"
+         data-copied-text="Message copied."
+         hidden></p>
+    </div>
+  </section>
+<% end %>
+
+<section class="mt-10" data-controller="copy-logic">
   <h2 class="font-medium">Share this split</h2>
   <p class="mt-1 text-sm text-black/70">Anyone with the link can see it and mark themselves paid.</p>
 
@@ -35,17 +76,22 @@
            value="<%= share_url(@split.share_token) %>"
            aria-label="Share link"
            class="w-full border-2 border-black px-2 py-2 text-sm"
-           data-copy-link-logic-target="link"
-           data-action="focus->copy-link-logic#selectAll">
+           data-copy-logic-target="source"
+           data-action="focus->copy-logic#selectAll">
 
     <button type="button"
             class="shrink-0 border-2 border-black px-3 py-2 text-sm font-medium"
-            data-action="copy-link-logic#copy">Copy</button>
+            data-action="copy-logic#copy">Copy</button>
   </div>
 
-  <p class="mt-2 text-sm" role="status" data-copy-link-logic-target="confirmation" hidden>
-    Link copied.
-  </p>
+  <p class="mt-2 text-sm" role="status"
+     data-copy-logic-target="confirmation"
+     data-copied-text="Link copied."
+     hidden></p>
+
+  <div class="mt-4">
+    <%= render "payment_profiles/payment_profile", payment_profile: @payment_profile %>
+  </div>
 </section>
 
 <div class="mt-10 flex gap-2">

@@ -52,6 +52,7 @@ Five features, each small on its own, that together feel like a finished product
 | Custom split | Adjust any person's share. The leftover spreads evenly across people you haven't touched, and touched people lock. | The total can never go over or under. A "remaining" amount is always visible. The server rejects a split that doesn't add up. |
 | Share link | One public link per split. A friend opens it, sees what they owe, and taps "I paid." | The link works without an account. The organizer sees who has paid. A wrong link shows a not-found page. |
 | History | The organizer's past splits, each with its total and how much is still owed. | Splits list newest first. An empty history invites starting a split. |
+| Ask for the money | Each saved person can hold a Venmo username, Cash App $Cashtag or Zelle contact, and the organizer can hold their own. The split then offers a request per person, and the share page offers a way to pay. | A person with a Venmo username gets a real link that opens Venmo with the amount filled in. Apps that cannot carry a request from a web page say so rather than pretending. One message holds every outstanding share, to paste into a group chat. |
 
 ## User flow
 
@@ -158,7 +159,8 @@ Rails.application.routes.draw do
   resources :splits, only: %i[index create show edit update] do
     resources :participants, only: %i[create destroy]
   end
-  resources :people, only: %i[index create]  # index = search
+  resources :people, only: %i[index create show edit update]  # index = search
+  resource :payment_profile, only: %i[show edit update]      # how the organizer gets paid
 
   # Public share link
   get "s/:share_token", to: "shares#show", as: :share
@@ -169,6 +171,32 @@ end
 
 `SplitsController#update` saves amounts with one call to `SplitMath`, so the browser and
 server can never disagree for long: if they do, the server's version replaces the rows.
+
+## Asking for the money
+
+*Added 2026-11-05.*
+
+Splitting the bill is half the job; collecting it is the other half. Both directions are
+supported: the organizer asking each friend, and a friend paying the organizer.
+
+| App | Request (organizer → friend) | Pay (friend → organizer) |
+| --- | --- | --- |
+| Venmo | Real link. `https://venmo.com/<user>?txn=charge&amount=&note=` is Venmo's own documented format. | Real link, `txn=pay`. |
+| Cash App | Demonstration. A Cash App link can send money but cannot ask for it. | Real link, `https://cash.app/$<cashtag>/<amount>`. |
+| Zelle | Demonstration. Zelle has no public link format; it lives inside each bank's app. | Demonstration. |
+| Apple Pay | Demonstration. Needs a merchant account and a payment processor. | Demonstration. |
+
+A demonstration is a disclosure that shows exactly what would be sent, says why it cannot be
+sent from a web page, and states that nothing has been. Nothing is dressed up as working when
+it is not — somebody would tap it and believe money had moved.
+
+Handles live on `people` (so a friend can be asked) and on `payment_profiles`, one row per
+browser (so the organizer can be paid). Both get the columns and the format rules from one
+concern, `PaymentHandles`. Every handle ends up inside a URL, so it is validated on the way in
+and escaped again on the way out.
+
+The Cash App amount suffix is widely used but is not in Cash App's own documentation, so the
+app never promises the amount will arrive prefilled.
 
 ## Naming and tests
 

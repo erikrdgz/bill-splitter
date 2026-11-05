@@ -7,8 +7,13 @@ Rails.application.routes.draw do
     resources :participants, only: %i[create update destroy]
   end
 
-  # index is the search behind the people picker.
-  resources :people, only: %i[index create]
+  # index is the search behind the people picker; edit and update are where a
+  # saved person gets the handle you can ask them for money at.
+  resources :people, only: %i[index create show edit update]
+
+  # The organizer's own handles, so friends can pay them. Singular: there is one
+  # per browser.
+  resource :payment_profile, only: %i[show edit update]
 
   # The public share link. Short, because it gets pasted into a group chat, and
   # outside /splits because nothing here is scoped to the organizer's cookie:

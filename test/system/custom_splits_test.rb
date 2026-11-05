@@ -150,8 +150,11 @@ class CustomSplitsTest < ApplicationSystemTestCase
     click_on "Save amounts"
     assert_text "Saved."
 
-    assert_operator page.evaluate_script("window.scrollY"), :>, 0,
-                    "saving threw the page back to the top"
+    # Turbo restores the scroll a moment after the morph, so this waits for it
+    # the way Capybara's own matchers wait.
+    assert_eventually("saving threw the page back to the top") do
+      page.evaluate_script("window.scrollY").to_i.positive?
+    end
   end
 
   test "switching back to even frees every row" do

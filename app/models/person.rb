@@ -2,6 +2,9 @@
 # People belong to a browser, not an account: owner_token comes from a signed
 # cookie set on the first visit.
 class Person < ApplicationRecord
+  # Where this person can be asked for money, if the organizer knows.
+  include PaymentHandles
+
   # :nullify, not :destroy. Deleting a person must not quietly delete a row from
   # a past split and make its amounts stop adding up; the row falls back to its
   # "Person 3" placeholder instead.

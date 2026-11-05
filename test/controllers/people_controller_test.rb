@@ -130,6 +130,65 @@ class PeopleControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  # Payment handles on a saved person.
+
+  test "a saved person can be given the handles to ask them for money at" do
+    split = create_split(amount: "100", people_count: 2)
+    person = save_people(split, "Marissa").first
+
+    patch person_url(person), params: { person: {
+      venmo_handle: "@marissa-v", cashapp_cashtag: "$marissa", zelle_contact: "m@example.com"
+    } }, as: :turbo_stream
+
+    assert_response :success
+    person.reload
+
+    assert_equal "marissa-v", person.venmo_handle
+    assert_equal "marissa", person.cashapp_cashtag
+    assert_equal "m@example.com", person.zelle_contact
+  end
+
+  test "the handle form answers inside that person's own frame" do
+    split = create_split(amount: "100", people_count: 2)
+    person = save_people(split, "Marissa").first
+
+    get edit_person_url(person)
+
+    assert_response :success
+    assert_select "turbo-frame##{ActionView::RecordIdentifier.dom_id(person, :payment)}"
+  end
+
+  test "a bad handle is refused and the person is left alone" do
+    split = create_split(amount: "100", people_count: 2)
+    person = save_people(split, "Marissa").first
+
+    patch person_url(person), params: { person: { venmo_handle: "not a username" } },
+                              as: :turbo_stream
+
+    assert_response :unprocessable_entity
+    assert_nil person.reload.venmo_handle
+  end
+
+  # The handle form must not become a back door for renaming somebody.
+  test "the handle form cannot rename a person" do
+    split = create_split(amount: "100", people_count: 2)
+    person = save_people(split, "Marissa").first
+
+    patch person_url(person), params: { person: { name: "Someone else", venmo_handle: "m" } },
+                              as: :turbo_stream
+
+    assert_equal "Marissa", person.reload.name
+    assert_equal "m", person.venmo_handle
+  end
+
+  test "another browser's person cannot be given handles" do
+    patch person_url(people(:marissa)), params: { person: { venmo_handle: "mine" } },
+                                        as: :turbo_stream
+
+    assert_response :not_found
+    assert_nil people(:marissa).reload.venmo_handle
+  end
+
   private
 
   # Saved under the split's own owner_token, which is this test browser's cookie

@@ -73,7 +73,7 @@ bin/rails test:system
 | Split editor | `GET /splits/:id/edit` | Rename, change the total, add, name and remove people. Even and Custom modes. |
 | People picker | `GET /people?participant_id=…` | Search-as-you-type in a Turbo Frame; Stimulus only debounces. |
 | Share page | `GET /s/:share_token` | Public. A friend sees what they owe and taps "I paid". No account. |
-| Split detail | `GET /splits/:id` | The organizer's view: who has paid, what is owed, the link to copy. |
+| Split detail | `GET /splits/:id` | The organizer's view: who has paid, what is owed, the link to copy, and a payment request per person. |
 | History | `GET /splits` | This browser's splits, newest first. |
 
 ## How the money works
@@ -90,6 +90,21 @@ refuses to save a split whose rows do not add up to its total.
 There are no accounts. A signed, httponly, permanent cookie holds a random `owner_token`, and
 every lookup is scoped to it, so another browser gets a 404 rather than someone else's bill.
 The share link is the one exception: there, the token is the credential.
+
+## Asking for the money
+
+Each saved person can hold a Venmo username, Cash App $Cashtag or Zelle contact; the organizer
+can hold their own. The split detail page then offers a request per unpaid person, and the
+share page offers a way to pay.
+
+Venmo and Cash App publish URL formats that open their app with the amount filled in, so those
+are **real links**. Zelle has no public link format and Apple Pay needs a merchant account, so
+those are **demonstrations** — a panel showing exactly what would be sent, why it cannot be
+sent from a web page, and that nothing has been. `PaymentLink#real?` is the only thing that
+decides which is which, so a mock can never render as a working button.
+
+Every handle ends up inside a URL, so it is format-checked on the way in by the
+`PaymentHandles` concern and escaped again on the way out.
 
 ## Not done yet
 

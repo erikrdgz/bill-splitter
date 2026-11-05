@@ -308,7 +308,7 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     get split_url(split)
 
     assert_select "input[readonly][value=?]", share_url(split.share_token)
-    assert_select "[data-controller=copy-link-logic]"
+    assert_select "[data-controller=copy-logic]"
   end
 
   test "a browser with a different owner cookie cannot see someone else's detail page" do

@@ -3,6 +3,7 @@ class PaymentsController < ApplicationController
   def create
     @split = Split.find_by!(share_token: params[:share_token])
     @participant = @split.participants.find(params[:participant_id])
+    @payment_profile = PaymentProfile.find_by(owner_token: @split.owner_token)
 
     # Marking a row that is already paid is not an error and must not move the
     # time it was paid: two people tapping the same row in a group chat is a
@@ -12,7 +13,8 @@ class PaymentsController < ApplicationController
     render turbo_stream: [
       turbo_stream.replace(@participant,
                            partial: "payments/payment_row",
-                           locals: { participant: @participant, split: @split, payable: true }),
+                           locals: { participant: @participant, split: @split, payable: true,
+                                      payment_profile: @payment_profile }),
       turbo_stream.replace("owed", partial: "shares/owed", locals: { split: @split.reload })
     ]
   end

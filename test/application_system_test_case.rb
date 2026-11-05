@@ -6,6 +6,15 @@ require "test_helper"
 # untested accessible names are the ones that rot.
 Capybara.enable_aria_label = true
 
+# Once the system suite passed fifty tests, Minitest began running it in
+# parallel — one browser per processor, which is fourteen headless Chromes on
+# this machine. Everything still works; it just takes longer to answer, and
+# Capybara's two-second default started timing out on perfectly good pages.
+#
+# This is a maximum, not a pause: a test that passes immediately still passes
+# immediately. It only buys patience for the ones competing for a core.
+Capybara.default_max_wait_time = 5
+
 class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   # 375 x 812 is the viewport the spec designs for, so the tests drive the app
   # at the size most people will actually use it at rather than at a desktop
@@ -41,5 +50,21 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
     hook = target == "amount" ? "[data-row-amount]" : "[data-split-logic-target='#{target}']"
 
     "ol#participants > li:nth-of-type(#{index + 1}) #{hook}"
+  end
+
+  # Capybara's matchers retry; reading a value out of JavaScript does not. This
+  # waits the same way for something that settles a moment later — like the
+  # scroll position Turbo restores after morphing a page.
+  def assert_eventually(message = nil, timeout: Capybara.default_max_wait_time)
+    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout
+
+    loop do
+      return if yield
+      break if Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+
+      sleep 0.1
+    end
+
+    flunk(message || "the condition was never true within #{timeout} seconds")
   end
 end

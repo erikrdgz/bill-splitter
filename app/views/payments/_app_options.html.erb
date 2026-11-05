@@ -1,0 +1,32 @@
+<%# The payment apps for one person and one amount.
+
+    A real link is a link. A demonstration is a disclosure that says exactly
+    what would be sent, why it cannot be sent from here, and that nothing has
+    been. Dressing a mock up as a working button is the one genuinely dishonest
+    thing this feature could do — somebody would tap it and believe money had
+    moved. %>
+<div class="mt-2 flex flex-wrap gap-2">
+  <% links.each do |link| %>
+    <% if link.real? %>
+      <%# rel="noopener" because target="_blank" would otherwise hand the new
+          page a reference back to this one. %>
+      <%= link_to link.url,
+                  target: "_blank",
+                  rel: "noopener noreferrer",
+                  class: "border-2 border-black px-3 py-1 text-sm font-medium" do %>
+        <%= link.name %> &rarr;
+      <% end %>
+    <% else %>
+      <details class="border-2 border-dashed border-black/40">
+        <summary class="cursor-pointer px-3 py-1 text-sm">
+          <%= link.name %> <span class="text-black/50">(demo)</span>
+        </summary>
+        <div class="border-t border-black/20 px-3 py-2 text-sm">
+          <p class="font-medium"><%= link.summary %></p>
+          <p class="mt-1 text-black/70"><%= link.why_demonstrated %></p>
+          <p class="mt-1 text-black/70">Nothing has been sent.</p>
+        </div>
+      </details>
+    <% end %>
+  <% end %>
+</div>

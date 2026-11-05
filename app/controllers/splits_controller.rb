@@ -41,9 +41,10 @@ class SplitsController < ApplicationController
     end
   end
 
-  # The organizer's own view of a split: who has paid, what is still owed, and
-  # the link to hand around.
+  # The organizer's own view of a split: who has paid, what is still owed, the
+  # link to hand around, and the ways to ask for the money.
   def show
+    @payment_profile = PaymentProfile.for_owner(owner_token)
   end
 
   def edit

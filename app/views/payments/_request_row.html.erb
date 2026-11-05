@@ -1,0 +1,31 @@
+<%# One person the organizer still has to chase, and the ways to chase them.
+
+    A row with no saved person has nowhere to send a request, so it says what
+    to do about that instead of showing dead buttons.
+
+    The id is here so saving a handle can redraw this whole row: new handle,
+    new buttons. %>
+<li id="<%= dom_id(participant, :request) %>" class="border-t border-black/20 py-3">
+  <div class="flex items-baseline justify-between gap-3">
+    <span class="font-medium"><%= participant.display_name %></span>
+    <span class="font-medium tabular-nums"><%= money(participant.amount_cents) %></span>
+  </div>
+
+  <% if participant.person.nil? %>
+    <p class="mt-1 text-sm text-black/60">
+      Name this row in the editor and you can ask them here.
+    </p>
+  <% else %>
+    <% if participant.person.any_payment_handle? %>
+      <%= render "payments/app_options",
+                 links: payment_links_for(participant.person,
+                                          amount_cents: participant.amount_cents,
+                                          note: split.title,
+                                          direction: :charge) %>
+    <% end %>
+
+    <div class="mt-2">
+      <%= render "people/payment_details", person: participant.person, participant: participant %>
+    </div>
+  <% end %>
+</li>

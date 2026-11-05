@@ -630,3 +630,90 @@ remaining *for*. Now:
 - "Save" → "Save name and total", beside the separate "Save amounts"
 - "Remaining" → "Left to give", with "Every share has to be given out before you can save."
 - "Share this split" → "Share and request money", since that page now does both
+
+## Asking for the money
+
+### Both directions, because they need different handles
+
+The organizer asking a friend needs the **friend's** handle; a friend paying the organizer
+needs the **organizer's**. So handles live in two places: on `people`, and on
+`payment_profiles`, one row per browser.
+
+`PaymentHandles` is a concern because this is what concerns are actually for — two models with
+the same three columns, the same normalisation and the same validation rules. (Earlier in this
+build I deliberately did not extract `owner_token` into a concern, because that was two lines.
+This is not.)
+
+### Real where it is free, honest where it is not
+
+Venmo publishes a URL format that opens the app with the amount and note filled in, and Cash
+App publishes one for payments. Those are real links that really work, with no API key, no
+account and no approval.
+
+Zelle has no public link format at all — it lives inside each bank's app. Apple Pay needs a
+merchant account, a payment processor and server-side merchant validation. Cash App links can
+send money but cannot ask for it.
+
+Those three are built as **demonstrations**: a disclosure that shows exactly what would be
+sent, says why it cannot be sent from a web page, and states that nothing has been.
+
+**Why this matters more than it looks:** a mock dressed up as a working button is the one
+genuinely harmful thing this feature could do. Somebody taps "Zelle", sees nothing happen, and
+assumes the money moved. `PaymentLink#real?` is the single place that decides, and the view has
+no way to render a link for something that is not.
+
+### Apps nobody has a handle for are not shown
+
+`PaymentLink#offerable?` hides an app unless there is a handle for it — except Apple Pay, which
+belongs to the device rather than to a person. Four controls where one is useful is worse than
+one.
+
+### Handles are validated on the way in and escaped on the way out
+
+Every handle ends up inside a URL. `PaymentHandles` restricts each format (Venmo to letters,
+digits, dashes and underscores; a cashtag to a letter then alphanumerics; Zelle to an email or
+phone), and `PaymentLink` escapes the handle again with `CGI.escapeURIComponent` before
+interpolating. There is a test that `a b&c=d` cannot break out of the path.
+
+Belt and braces on purpose: the validation is what gives a useful error message, and the
+escaping is what holds if a validation is ever loosened.
+
+### The batch message is the feature, not the four buttons
+
+A bill gets settled by pasting one message into the group chat. `payment_request_message`
+builds exactly that — every unpaid share, with a real link beside the ones that have one — and
+the page offers it in a selectable textarea with a copy button.
+
+### Saving a handle redraws the whole request row
+
+A new handle means new buttons beside it. The first version replaced only the Turbo Frame
+holding the handles, which left the buttons stale until a reload — caught by a system test.
+The form now carries the participant it was opened from, and the answer replaces that whole
+row.
+
+## The morph tags were never on the page
+
+`turbo_refreshes_with method: :morph, scroll: :preserve` was in the layout and did nothing at
+all. The helper works through `provide :head`, which appends to a buffer that `yield :head`
+has already emitted by the time the call runs — written below that line, it renders silently
+into nothing.
+
+The system test caught it only under parallel load, which is why it looked like flakiness. The
+layout now calls `turbo_refresh_method_tag` and `turbo_refresh_scroll_tag` directly, so the
+tags render where they are written, and the behavior was confirmed in a real browser: scrolled
+to 985, saved, landed at 1061 instead of 0.
+
+**The lesson worth keeping:** a Rails helper that returns nothing and writes to a buffer fails
+silently when called in the wrong order. Checking the rendered HTML, not the template, is what
+found it.
+
+## Capybara's default wait is too short under parallel load
+
+Passing fifty tests tipped the system suite into Minitest's parallel mode — one browser per
+processor, fourteen headless Chromes on this machine. Everything still worked; the pages just
+took longer to answer than Capybara's two-second default allowed, and tests failed with stale
+element references on perfectly good pages.
+
+`Capybara.default_max_wait_time = 5` is a maximum, not a pause: a test that passes immediately
+still passes immediately. `assert_eventually` does the same job for values read out of
+JavaScript, which Capybara's matchers cannot retry for us.

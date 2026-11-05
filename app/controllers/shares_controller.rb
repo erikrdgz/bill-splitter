@@ -8,5 +8,6 @@ class SharesController < ApplicationController
     # includes, because the page names every participant: without it this is a
     # query per row.
     @split = Split.includes(participants: :person).find_by!(share_token: params[:share_token])
+    @payment_profile = PaymentProfile.find_by(owner_token: @split.owner_token)
   end
 end
