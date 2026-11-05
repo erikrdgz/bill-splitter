@@ -1,0 +1,41 @@
+<% content_for :title, @split.title %>
+
+<h1 class="text-2xl font-semibold tracking-tight">Edit split</h1>
+
+<%= form_with model: @split, class: "mt-8" do |form| %>
+  <%= render "shared/errors", record: @split %>
+
+  <div>
+    <%= form.label :title, "Title", class: "block font-medium" %>
+    <%= form.text_field :title,
+                        maxlength: 80,
+                        class: "mt-2 w-full border-b-2 border-black bg-transparent py-2 " \
+                               "text-lg focus:outline-none" %>
+  </div>
+
+  <div class="mt-8">
+    <%= form.label :amount, "Total", class: "block font-medium" %>
+    <div class="mt-2 flex items-baseline gap-2 border-b-2 border-black">
+      <span aria-hidden="true" class="text-2xl">$</span>
+      <%= form.text_field :amount,
+                          inputmode: "decimal",
+                          autocomplete: "off",
+                          class: "w-full bg-transparent py-2 text-2xl tabular-nums " \
+                                 "focus:outline-none" %>
+    </div>
+  </div>
+
+  <section class="mt-10">
+    <h2 class="font-medium">Each person pays</h2>
+    <ol class="mt-2" id="participants">
+      <%= render partial: "participants/participant_row",
+                 collection: @split.participants, as: :participant %>
+    </ol>
+
+    <%= render "splits/remaining", split: @split %>
+  </section>
+
+  <%= form.submit "Save",
+                  class: "mt-10 w-full border-2 border-black bg-black px-4 py-3 " \
+                         "font-medium text-white" %>
+<% end %>

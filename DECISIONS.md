@@ -300,3 +300,67 @@ The button is on the screen because the spec's screen table requires it, but
 `SplitsController#create` arrives in step 4. Until then, clicking it raises
 `AbstractController::ActionNotFound`. This is a deliberate one-step gap, written down here so
 it is a known edge and not a surprise.
+
+## Step 4 — Save a split and edit it in Even mode
+
+### Ownership is a signed, httponly cookie, and lookups are scoped to it
+
+`ApplicationController#owner_token` reads a signed permanent cookie or issues a random one.
+Every lookup goes through `Split.owned_by(owner_token).find(...)`.
+
+**Why `find` on a scope rather than a check after loading:** a stranger gets
+`RecordNotFound` → 404, not 403. A 403 would confirm the split exists, which is more than a
+stranger should learn from a URL they guessed.
+
+**Why httponly:** no JavaScript in this app needs the token, so no JavaScript may read it.
+Signed, so a browser cannot award itself someone else's token by editing the cookie.
+
+### The server works the shares out again on create, and never trusts the posted ones
+
+The quick split screen has been showing amounts all along, but it does not send them. `create`
+takes only the amount and the head count and calls `apply_even_split`. The spec says the server
+has the final say; the cheapest way to mean it is to never accept the browser's arithmetic in
+the first place.
+
+### `DollarAmount` is the Ruby mirror of the JavaScript money parsing
+
+`to_cents`, `format` and `to_input`, all integer-only — no `parseFloat` on one side and no
+`Float` on the other. There are round-trip tests asserting that what the form shows and what
+the screen shows both parse back to the cents they came from.
+
+### A new split is named after today
+
+The quick split has no title field, and `title` is required. Naming the split is what the
+editor is for, so `create` sets "Split on November 5" and the organizer renames it.
+
+**This is a product decision the spec left open**, recorded here rather than guessed at twice.
+
+### The head count is clamped at 1 and at one over the maximum, and nowhere else
+
+A forged POST asking for a million people would otherwise build a million `Participant` objects
+in memory before any validation ran. Clamping to `PEOPLE_RANGE.max + 1` means an over-limit
+request still fails with the message the organizer should see ("must be between 2 and 20
+people"), while the work stays bounded. Clamping to the maximum itself would have silently
+created a 20-person split from a request for 50.
+
+### `has_many :participants, autosave: true`
+
+Re-spreading the money changes every row. Without `autosave`, `split.save` would write the new
+total and leave the old amounts, storing a split that does not add up — the exact thing the
+validation exists to prevent. `autosave` says what is true: a split and its amounts are one
+thing that saves or fails together.
+
+### A rejected editor shows what would have been saved
+
+When a total is refused, the form keeps the typed total and the rows show the amounts that
+total would have produced. The alternative — showing the last valid amounts next to the new
+total — puts two contradictory things on screen. There is a system test that follows the
+rejection by reloading the editor, to prove none of it reached the database.
+
+### A note on Capybara: `all(...)` does not wait
+
+Two system tests failed by reading the row amounts before Turbo had swapped the page in.
+`assert_selector` and `assert_text` retry until the timeout; `all` returns whatever is on the
+page right now. The fix is to wait on something only the new page has — the "Saved." flash, or
+the error message — before reading. Worth remembering, because the failure looks like a
+server-side bug and is not one.

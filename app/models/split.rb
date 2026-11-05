@@ -12,7 +12,10 @@ class Split < ApplicationRecord
   # is the whole security model for the public share link.
   has_secure_token :share_token
 
-  has_many :participants, -> { order(:position) }, dependent: :destroy
+  # autosave, because a split and its amounts are one thing. Re-spreading the
+  # money changes every row, and saving the split without them would leave the
+  # database holding a split that does not add up.
+  has_many :participants, -> { order(:position) }, dependent: :destroy, autosave: true
 
   validates :title, presence: true, length: { maximum: 80 }
   validates :owner_token, presence: true
@@ -27,6 +30,16 @@ class Split < ApplicationRecord
 
   scope :owned_by, ->(owner_token) { where(owner_token: owner_token) }
   scope :newest_first, -> { order(created_at: :desc) }
+
+  # The total as a person types it. Forms deal in dollars; the database only
+  # ever sees cents.
+  def amount=(typed)
+    self.total_cents = DollarAmount.to_cents(typed)
+  end
+
+  def amount
+    DollarAmount.to_input(total_cents)
+  end
 
   # Rule 2 applied to this split: every row gets an even share and no row is
   # locked. Assigns only — the caller saves.

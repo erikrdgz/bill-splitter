@@ -3,10 +3,9 @@
 <h1 class="text-2xl font-semibold tracking-tight">Split a bill</h1>
 <p class="mt-2 text-black/70">Enter the amount and how many people. No sign-up.</p>
 
-<%# scope: :split rather than model: @split, because this form has no record
-    behind it. The two fields are an amount in dollars and a head count, neither
-    of which is a column on splits, so there is nothing for form_with to read
-    values from. The server turns them into cents and participants on create. %>
+<%# scope: :split rather than model: @split, because the two fields are an
+    amount in dollars and a head count, and neither is a column on splits. The
+    server turns them into cents and participants on create. %>
 <%= form_with scope: :split, url: splits_path, class: "mt-8",
               data: {
                 controller: "quick-split-logic",
@@ -14,6 +13,8 @@
                 quick_split_logic_maximum_people_value: @maximum_people,
                 quick_split_logic_maximum_total_cents_value: @maximum_total_cents
               } do |form| %>
+
+  <%= render "shared/errors", record: @split %>
 
   <div>
     <%= form.label :amount, "Amount", class: "block font-medium" %>
@@ -24,6 +25,7 @@
           QuickSplitLogic parse the digits itself instead of handing a float to
           the browser. %>
       <%= form.text_field :amount,
+                          value: @split.amount,
                           inputmode: "decimal",
                           autocomplete: "off",
                           placeholder: "0.00",
@@ -50,7 +52,7 @@
           through the same clamp, so neither can produce a head count the server
           would refuse. %>
       <%= form.number_field :people_count,
-                            value: @default_people,
+                            value: @people_count,
                             min: @minimum_people,
                             max: @maximum_people,
                             step: 1,
@@ -78,7 +80,7 @@
   <section class="mt-10" aria-live="polite">
     <h2 class="font-medium">Each person pays</h2>
     <ol class="mt-2" data-quick-split-logic-target="shares">
-      <%= render partial: "share_row", collection: (1..@default_people).to_a, as: :position %>
+      <%= render partial: "share_row", collection: (1..@people_count).to_a, as: :position %>
     </ol>
 
     <template data-quick-split-logic-target="shareRowTemplate">

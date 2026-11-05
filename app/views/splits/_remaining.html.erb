@@ -1,0 +1,10 @@
+<%# The spec asks for a remaining amount that is always visible, so it reads the
+    same whether it is zero or not: the organizer should never have to wonder
+    whether the line is missing or the figure is nil.
+
+    It gets its own partial because custom mode updates it from a Turbo Stream
+    every time a row changes. %>
+<p id="remaining" class="mt-4 flex items-baseline justify-between border-t-2 border-black pt-3">
+  <span class="font-medium">Remaining</span>
+  <span class="font-medium tabular-nums"><%= money(split.remaining_cents) %></span>
+</p>

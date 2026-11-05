@@ -61,4 +61,161 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
       get root_url
     end
   end
+
+  # Saving a quick split.
+
+  test "creating a split from the quick split form redirects to the editor" do
+    assert_difference -> { Split.count }, 1 do
+      post splits_url, params: { split: { amount: "100", people_count: "3" } }
+    end
+
+    assert_redirected_to edit_split_path(Split.find(response.location[%r{/splits/(\d+)/edit}, 1]))
+  end
+
+  test "the server works the shares out again rather than trusting the browser" do
+    split = create_split(amount: "100", people_count: 3)
+
+    assert_equal 10_000, split.total_cents
+    assert_equal [ 3334, 3333, 3333 ], split.participants.map(&:amount_cents)
+    assert_equal [ 1, 2, 3 ], split.participants.map(&:position)
+  end
+
+  test "a new split is named after today until the organizer renames it" do
+    assert_equal "Split on #{Date.current.strftime('%B %-d')}", create_split.title
+  end
+
+  test "a new split belongs to the browser that made it" do
+    split = create_split
+
+    assert split.owner_token.present?
+    assert cookies[:owner_token].present?
+  end
+
+  test "the rows start out unnamed placeholders" do
+    assert_equal [ "Person 1", "Person 2", "Person 3" ],
+                 create_split.participants.map(&:display_name)
+  end
+
+  test "a split with no amount is refused and nothing is written" do
+    assert_no_difference [ -> { Split.count }, -> { Participant.count } ] do
+      post splits_url, params: { split: { amount: "", people_count: "3" } }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test "a split for one person is refused" do
+    assert_no_difference -> { Split.count } do
+      post splits_url, params: { split: { amount: "100", people_count: "1" } }
+    end
+
+    assert_response :unprocessable_entity
+    assert_select "div[role=alert]", text: /between 2 and 20 people/
+  end
+
+  # A forged request could ask for a million rows. The controller builds at most
+  # one over the maximum, which still fails validation with the right message.
+  test "an absurd head count is refused without building a row for each" do
+    assert_no_difference -> { Split.count } do
+      post splits_url, params: { split: { amount: "100", people_count: "1000000" } }
+    end
+
+    assert_response :unprocessable_entity
+    assert_select "div[role=alert]", text: /between 2 and 20 people/
+  end
+
+  test "a refused split keeps what the organizer typed" do
+    post splits_url, params: { split: { amount: "", people_count: "7" } }
+
+    assert_select "input[name=?][value=?]", "split[people_count]", "7"
+  end
+
+  # Editing.
+
+  test "the editor shows the split and its rows" do
+    split = create_split(amount: "100", people_count: 3)
+
+    get edit_split_url(split)
+
+    assert_response :success
+    assert_select "input[name=?][value=?]", "split[title]", split.title
+    assert_select "input[name=?][value=?]", "split[amount]", "100.00"
+    assert_select "ol#participants > li", 3
+    assert_select "#remaining", text: /\$0\.00/
+  end
+
+  test "the editor shows each row's share and percentage" do
+    split = create_split(amount: "100", people_count: 3)
+
+    get edit_split_url(split)
+
+    assert_select "##{ActionView::RecordIdentifier.dom_id(split.participants.first)}",
+                  text: /Person 1.*33\.3%.*\$33\.34/m
+  end
+
+  # The spec's ownership test.
+
+  test "a browser with a different owner cookie cannot edit someone else's split" do
+    get edit_split_url(splits(:stranger_brunch))
+
+    assert_response :not_found
+  end
+
+  test "a browser with a different owner cookie cannot update someone else's split" do
+    patch split_url(splits(:stranger_brunch)), params: { split: { title: "Mine now" } }
+
+    assert_response :not_found
+    assert_equal "Someone else's brunch", splits(:stranger_brunch).reload.title
+  end
+
+  test "renaming a split keeps its amounts" do
+    split = create_split(amount: "100", people_count: 3)
+
+    patch split_url(split), params: { split: { title: "Dinner at Rosalia" } }
+
+    assert_redirected_to edit_split_path(split)
+    assert_equal "Dinner at Rosalia", split.reload.title
+    assert_equal [ 3334, 3333, 3333 ], split.participants.map(&:amount_cents)
+  end
+
+  test "changing the total respreads the shares so they still add up" do
+    split = create_split(amount: "100", people_count: 3)
+
+    patch split_url(split), params: { split: { amount: "90" } }
+
+    split.reload
+
+    assert_equal 9000, split.total_cents
+    assert_equal [ 3000, 3000, 3000 ], split.participants.map(&:amount_cents)
+    assert_equal 0, split.remaining_cents
+  end
+
+  test "a total that would leave somebody nothing is refused" do
+    split = create_split(amount: "100", people_count: 3)
+
+    patch split_url(split), params: { split: { amount: "0.02" } }
+
+    assert_response :unprocessable_entity
+    assert_equal 10_000, split.reload.total_cents
+  end
+
+  test "a total above the maximum is refused" do
+    split = create_split(amount: "100", people_count: 3)
+
+    patch split_url(split), params: { split: { amount: "100000" } }
+
+    assert_response :unprocessable_entity
+    assert_equal 10_000, split.reload.total_cents
+  end
+
+  test "a split can never be saved in a state that does not add up" do
+    split = create_split(amount: "100", people_count: 3)
+
+    patch split_url(split), params: { split: { amount: "77.77" } }
+
+    split.reload
+
+    assert_equal 7777, split.total_cents
+    assert_equal 7777, split.participants.sum(&:amount_cents)
+  end
 end
