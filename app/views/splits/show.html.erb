@@ -2,10 +2,42 @@
 
 <h1 class="text-2xl font-semibold tracking-tight"><%= @split.title %></h1>
 
-<p class="mt-2 flex items-baseline justify-between text-lg">
+<p class="summary-total">
   <span>Total bill</span>
   <span class="font-medium tabular-nums"><%= money(@split.total_cents) %></span>
 </p>
+
+<section class="mt-10" data-controller="copy-logic">
+  <h2 class="font-medium">Share this split</h2>
+  <p class="mt-1 text-sm text-muted">Anyone with the link can see it and mark themselves paid.</p>
+
+  <div class="mt-2 flex gap-2">
+    <%# A real, readable, selectable input: if the clipboard is blocked, the
+        link can still be copied by hand. The button is a convenience, not the
+        only way out. %>
+    <input type="text"
+           readonly
+           value="<%= share_url(@split.share_token) %>"
+           aria-label="Share link"
+           class="w-full border-2 border-line px-2 py-2 text-sm"
+           data-copy-logic-target="source"
+           data-action="focus->copy-logic#selectAll">
+
+    <button type="button"
+            class="shrink-0 border-2 border-line px-3 py-2 text-sm font-medium"
+            data-action="copy-logic#copy">Copy</button>
+  </div>
+
+  <p class="mt-2 text-sm" role="status"
+     data-copy-logic-target="confirmation"
+     data-copied-text="Link copied."
+     hidden></p>
+
+  <div class="mt-4">
+    <%= render "payment_profiles/payment_profile", payment_profile: @payment_profile %>
+  </div>
+</section>
+
 
 <section class="mt-8">
   <h2 class="font-medium">Who has paid</h2>
@@ -25,7 +57,7 @@
 <% unless @split.fully_paid? %>
   <section class="mt-10">
     <h2 class="font-medium">Ask for the money</h2>
-    <p class="mt-1 text-sm text-black/70">
+    <p class="mt-1 text-sm text-muted">
       Venmo opens with the amount already filled in. The others cannot carry a
       request from a web page, so they are shown as demonstrations.
     </p>
@@ -40,19 +72,19 @@
     <%# The way a bill actually gets settled: one message in the group chat. %>
     <div class="mt-6" data-controller="copy-logic">
       <h3 class="font-medium">Send it all at once</h3>
-      <p class="mt-1 text-sm text-black/70">
+      <p class="mt-1 text-sm text-muted">
         One message with everyone's share, to paste into the group chat.
       </p>
 
       <textarea readonly
                 rows="5"
                 aria-label="Every request as one message"
-                class="mt-2 w-full border-2 border-black px-2 py-2 text-sm"
+                class="mt-2 w-full border-2 border-line px-2 py-2 text-sm"
                 data-copy-logic-target="source"
                 data-action="focus->copy-logic#selectAll"><%= payment_request_message(@split) %></textarea>
 
       <button type="button"
-              class="mt-2 w-full border-2 border-black px-4 py-2 text-sm font-medium"
+              class="mt-2 w-full border-2 border-line px-4 py-2 text-sm font-medium"
               data-action="copy-logic#copy">Copy the message</button>
 
       <p class="mt-2 text-sm" role="status"
@@ -63,40 +95,10 @@
   </section>
 <% end %>
 
-<section class="mt-10" data-controller="copy-logic">
-  <h2 class="font-medium">Share this split</h2>
-  <p class="mt-1 text-sm text-black/70">Anyone with the link can see it and mark themselves paid.</p>
-
-  <div class="mt-2 flex gap-2">
-    <%# A real, readable, selectable input: if the clipboard is blocked, the
-        link can still be copied by hand. The button is a convenience, not the
-        only way out. %>
-    <input type="text"
-           readonly
-           value="<%= share_url(@split.share_token) %>"
-           aria-label="Share link"
-           class="w-full border-2 border-black px-2 py-2 text-sm"
-           data-copy-logic-target="source"
-           data-action="focus->copy-logic#selectAll">
-
-    <button type="button"
-            class="shrink-0 border-2 border-black px-3 py-2 text-sm font-medium"
-            data-action="copy-logic#copy">Copy</button>
-  </div>
-
-  <p class="mt-2 text-sm" role="status"
-     data-copy-logic-target="confirmation"
-     data-copied-text="Link copied."
-     hidden></p>
-
-  <div class="mt-4">
-    <%= render "payment_profiles/payment_profile", payment_profile: @payment_profile %>
-  </div>
-</section>
 
 <div class="mt-10 flex gap-2">
   <%= link_to "Edit split", edit_split_path(@split),
-              class: "flex-1 border-2 border-black px-4 py-3 text-center font-medium" %>
+              class: "flex-1 border-2 border-line px-4 py-3 text-center font-medium" %>
   <%= link_to "All splits", splits_path,
-              class: "flex-1 border-2 border-black px-4 py-3 text-center font-medium" %>
+              class: "flex-1 border-2 border-line px-4 py-3 text-center font-medium" %>
 </div>

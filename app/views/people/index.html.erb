@@ -6,7 +6,7 @@
     was asked for out of the same response, which is why there is no separate
     endpoint for "just the results" to drift out of step. %>
 <turbo-frame id="<%= dom_id(@participant, :name) %>" class="block">
-  <div class="border-2 border-black p-3">
+  <div class="picker">
     <%= form_with url: people_path, method: :get,
                   data: {
                     controller: "people-search-logic",
@@ -19,11 +19,11 @@
                             autofocus: true,
                             autocomplete: "off",
                             placeholder: "Start typing",
-                            class: "mt-1 w-full border-b-2 border-black bg-transparent py-1 " \
+                            class: "mt-1 w-full border-b-2 border-line bg-transparent py-1 " \
                                    "focus:outline-none",
                             data: { action: "input->people-search-logic#search" } %>
       <%# Without JavaScript this is still a working search form. %>
-      <noscript><%= form.submit "Search", class: "mt-2 border-2 border-black px-3 py-1" %></noscript>
+      <noscript><%= form.submit "Search", class: "mt-2 border-2 border-line px-3 py-1" %></noscript>
     <% end %>
 
     <turbo-frame id="people_results" class="block">

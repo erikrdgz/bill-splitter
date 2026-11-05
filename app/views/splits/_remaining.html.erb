@@ -11,7 +11,7 @@
     amounts that were already set. SplitLogic updates both on every drag. %>
 <% remaining_cents = split.remaining_cents %>
 
-<div id="remaining" class="mt-4 border-t-2 border-black pt-3">
+<div id="remaining" class="mt-4 border-t-2 border-line pt-3">
   <p class="flex items-baseline justify-between">
     <span class="font-medium" data-split-logic-target="remainingLabel">
       <%= remaining_cents.negative? ? "Over the bill by" : "You pay" %>
@@ -22,7 +22,7 @@
   </p>
 
   <% if split.custom? %>
-    <p class="mt-1 text-sm text-black/60">
+    <p class="mt-1 text-sm text-muted">
       Whatever you don't ask anyone for is yours to cover.
     </p>
   <% end %>

@@ -110,9 +110,9 @@ class PaymentsTest < ApplicationSystemTestCase
 
   def open_split_detail
     visit root_path
-    fill_in "Amount", with: "100"
-    fill_in "People", with: "3"
-    click_on "Save and add names"
+    enter_bill_amount("100")
+    set_people_count("3")
+    click_on "Save split"
     assert_selector "h1", text: "Edit split"
 
     click_on "Share and request money"
@@ -123,9 +123,9 @@ class PaymentsTest < ApplicationSystemTestCase
 
   def open_split_detail_with_named_person
     visit root_path
-    fill_in "Amount", with: "100"
-    fill_in "People", with: "3"
-    click_on "Save and add names"
+    enter_bill_amount("100")
+    set_people_count("3")
+    click_on "Save split"
     assert_selector "h1", text: "Edit split"
 
     click_on "Name Person 1"

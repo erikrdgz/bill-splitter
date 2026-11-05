@@ -23,6 +23,28 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
 
   private
 
+  def enter_bill_amount(amount, label: "Amount")
+    find_field(label).click
+    within "dialog[open][aria-label='Enter bill amount']" do
+      click_on "Clear", exact: true
+      amount.to_s.each_char do |digit|
+        next unless digit.match?(/[0-9.]/)
+        click_on(digit == "." ? "Decimal point" : digit, exact: true)
+      end
+      click_on "Set amount"
+    end
+  end
+
+  def set_people_count(count)
+    count = count.to_i
+    current = find("input[data-quick-split-logic-target=peopleCount]", visible: :all).value.to_i
+    (count - current).times { click_on "Add", exact: true } if count > current
+    (current - count).times do
+      all("[data-quick-split-logic-target=shares] > li").last.send_keys(:delete)
+    end if count < current
+    assert_selector "[data-quick-split-logic-target=shares] > li", count: count
+  end
+
   # Why not `all(...).map(&:text)`: `all` returns the elements that are on the
   # page at that instant and never retries. Half of this app's screens change
   # under a Turbo Stream or a redirect, so a plain read either catches the old

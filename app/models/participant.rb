@@ -1,6 +1,9 @@
 # One person's share of one split. It may point at a saved Person, or stay an
 # unnamed placeholder the spec shows as "Person 3".
 class Participant < ApplicationRecord
+  PAYMENT_METHODS = { "venmo" => "Venmo", "cash_app" => "Cash App", "zelle" => "Zelle", "cash" => "Cash" }.freeze
+  validates :payment_method, inclusion: { in: PAYMENT_METHODS.keys }, allow_nil: true
+
   belongs_to :split
   belongs_to :person, optional: true
 

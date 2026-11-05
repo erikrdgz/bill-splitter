@@ -4,8 +4,9 @@ module PaymentsHelper
   #
   # `payable` is whatever holds the handles: a Person when the organizer is
   # asking, their own PaymentProfile when a friend is paying.
-  def payment_links_for(payable, amount_cents:, note:, direction:)
-    PaymentLink::APPS.map { |app|
+  def payment_links_for(payable, amount_cents:, note:, direction:, payment_method: nil)
+    apps = payment_method.present? ? PaymentLink::APPS.select { |app| app.to_s == payment_method } : PaymentLink::APPS
+    apps.map { |app|
       PaymentLink.new(
         app: app,
         handle: payable&.handle_for(app),
@@ -24,9 +25,9 @@ module PaymentsHelper
       link = payment_links_for(participant.person,
                                amount_cents: participant.amount_cents,
                                note: split.title,
-                               direction: :charge).find(&:real?)
+                               direction: :charge, payment_method: participant.payment_method).find(&:real?)
 
-      "#{participant.display_name}: #{money(participant.amount_cents)}#{" — #{link.url}" if link}"
+      "#{participant.display_name}: #{money(participant.amount_cents)}#{" · #{Participant::PAYMENT_METHODS[participant.payment_method]}" if participant.payment_method}#{" — #{link.url}" if link}"
     end
 
     ([ "#{split.title} — #{money(split.total_cents)}" ] + lines).join("\n")

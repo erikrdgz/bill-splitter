@@ -5,14 +5,16 @@
 
     The id is here so saving a handle can redraw this whole row: new handle,
     new buttons. %>
-<li id="<%= dom_id(participant, :request) %>" class="border-t border-black/20 py-3">
+<li id="<%= dom_id(participant, :request) %>" class="participant-card payment-card">
   <div class="flex items-baseline justify-between gap-3">
     <span class="font-medium"><%= participant.display_name %></span>
     <span class="font-medium tabular-nums"><%= money(participant.amount_cents) %></span>
   </div>
 
-  <% if participant.person.nil? %>
-    <p class="mt-1 text-sm text-black/60">
+  <% if participant.payment_method == "cash" %>
+    <p class="mt-2 text-sm text-muted">Paying in cash</p>
+  <% elsif participant.person.nil? %>
+    <p class="mt-1 text-sm text-muted">
       Name this row in the editor and you can ask them here.
     </p>
   <% else %>
@@ -21,7 +23,7 @@
                  links: payment_links_for(participant.person,
                                           amount_cents: participant.amount_cents,
                                           note: split.title,
-                                          direction: :charge) %>
+                                          direction: :charge, payment_method: participant.payment_method) %>
     <% end %>
 
     <div class="mt-2">

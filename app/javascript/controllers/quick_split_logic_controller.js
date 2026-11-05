@@ -1,152 +1,235 @@
 import { Controller } from "@hotwired/stimulus"
+import { openSheet, closeSheet } from "sheet_motion"
 
-// Mirrors SplitMath rules 2 and 6 in the browser, and nothing else.
-//
-// The spec is explicit that this is for instant feedback only: nothing here is
-// saved, and SplitsController recomputes every amount with SplitMath when the
-// split is created. If the two ever disagree, the server wins.
-//
-// The limits arrive as Stimulus values from SplitsController#new, so "2 to 20
-// people" and the maximum total are written down once, in Ruby, and never
-// duplicated here.
+// The calculator stays entirely local. Connecting prepares a row; only saving
+// or reviewing requests submits the draft for server validation.
 export default class extends Controller {
-  static targets = [
-    "amount",
-    "peopleCount",
-    "decrement",
-    "increment",
-    "shares",
-    "shareRowTemplate",
-    "centNote"
-  ]
-
-  static values = {
-    minimumPeople: Number,
-    maximumPeople: Number,
-    maximumTotalCents: Number
-  }
+  static targets = ["amount", "peopleCount", "countDisplay", "add", "shares",
+    "shareRowTemplate", "centNote", "friend", "remaining", "remainingLabel", "save", "review",
+    "error", "dialog", "connectionName", "connectionHandle", "connectionAmount", "method",
+    "handleFields", "handleLabel", "connectionError"]
+  static values = { minimumPeople: Number, maximumPeople: Number, maximumTotalCents: Number, draft: Array }
 
   connect() {
+    this.rows = this.draftValue.map(row => ({...row, amount_cents: Number(row.amount_cents), locked: row.locked === "1"}))
+    this.custom = this.rows.length > 0
     this.recalculate()
   }
 
   recalculate() {
-    const peopleCount = this.#peopleCount()
-    const totalCents = this.#amountInCents()
-
-    this.#renderRows(peopleCount, totalCents)
-    this.#renderCentNote(peopleCount, totalCents)
-    this.#updateStepperButtons(peopleCount)
+    const count = this.#count()
+    while (this.rows.length < count) this.rows.push({amount_cents: 0, locked: false})
+    this.rows = this.rows.slice(0, count)
+    this.total = this.#cents(this.amountTarget.value)
+    if (!this.custom) this.#distribute()
+    this.#render()
   }
 
-  decrement() {
-    this.#stepPeopleCountBy(-1)
-  }
-
-  increment() {
-    this.#stepPeopleCountBy(1)
-  }
-
-  // Typing is allowed to be mid-thought: someone reaching for 12 types "1"
-  // first, and snapping that straight up to the minimum of 2 would fight them.
-  // So the shares use the clamped count immediately, but the field itself is
-  // only corrected once they commit the value, on change.
-  normalizePeopleCount() {
-    this.peopleCountTarget.value = this.#peopleCount()
+  increment() { this.#step(1) }
+  #step(change) {
+    this.peopleCountTarget.value = Math.min(this.maximumPeopleValue, Math.max(this.minimumPeopleValue, this.#count() + change))
     this.recalculate()
   }
-
-  #stepPeopleCountBy(step) {
-    this.peopleCountTarget.value = this.#clamped(this.#peopleCount() + step)
+  #count() {
+    return Math.min(this.maximumPeopleValue, Math.max(this.minimumPeopleValue, parseInt(this.peopleCountTarget.value, 10) || this.minimumPeopleValue))
+  }
+  remove(event) {
+    if (this.rows.length <= this.minimumPeopleValue) return
+    this.rows.splice(this.#index(event), 1)
+    // Remove the exiting card itself so its animation never carries over to
+    // the next person when the remaining rows are rendered.
+    event.target.closest("li").remove()
+    this.peopleCountTarget.value = this.rows.length
+    if (!this.rows.length) this.custom = false
     this.recalculate()
   }
+  #index(event) { return Array.from(this.sharesTarget.children).indexOf(event.target.closest("li")) }
 
-  #peopleCount() {
-    return this.#clamped(parseInt(this.peopleCountTarget.value, 10))
+  #cents(value) {
+    const text = value.replace(/[^0-9.]/g, "")
+    const [whole, fraction = ""] = text.split(".")
+    return Math.min((parseInt(whole, 10) || 0) * 100 + (parseInt(`${fraction}00`.slice(0, 2), 10) || 0), this.maximumTotalCentsValue)
+  }
+  #distribute() {
+    if (!this.rows.length) return
+    const base = Math.floor(this.total / this.rows.length)
+    const remainder = this.total % this.rows.length
+    this.rows.forEach((row, index) => { row.amount_cents = base + (index < remainder ? 1 : 0); row.locked = false })
+  }
+  splitEvenly() { this.custom = false; this.recalculate() }
+  drag(event) { this.#setShare(this.#index(event), Math.round(Number(event.target.value) / 100) * 100, true) }
+  stepShare(event) {
+    if (!["ArrowLeft", "ArrowDown", "ArrowRight", "ArrowUp"].includes(event.key)) return
+    event.preventDefault()
+    const direction = ["ArrowLeft", "ArrowDown"].includes(event.key) ? -1 : 1
+    this.#setShare(this.#index(event), (Math.round(Number(event.target.value) / 100) + direction) * 100, true)
+  }
+  setAmount(event) { this.#setShare(this.#index(event), event.detail.cents) }
+  setPercentage(event) {
+    const percent = Number(event.target.value)
+    if (Number.isFinite(percent)) this.#setShare(this.#index(event), Math.round(this.total * Math.max(0, Math.min(100, percent)) / 100))
+    else this.#render()
+  }
+  #setShare(index, cents, whole = false) {
+    const held = this.rows.reduce((sum, row, position) => sum + (position === index ? 0 : row.amount_cents), 0)
+    const available = Math.max(0, this.total - held)
+    this.rows[index].amount_cents = Math.min(Math.max(0, cents), whole ? Math.floor(available / 100) * 100 : available)
+    this.rows[index].locked = true
+    this.custom = true
+    this.#render()
   }
 
-  #clamped(peopleCount) {
-    if (Number.isNaN(peopleCount)) return this.minimumPeopleValue
-
-    return Math.min(Math.max(peopleCount, this.minimumPeopleValue), this.maximumPeopleValue)
+  chooseFriend(event) {
+    const friend = event.currentTarget.dataset
+    if (this.rows.some(row => String(row.person_id) === friend.personId)) return
+    if (this.rows.length >= this.maximumPeopleValue) return
+    this.increment()
+    const row = this.rows.at(-1)
+    Object.assign(row, {person_id: friend.personId, name: friend.friendName})
+    this.#render()
   }
-
-  // Dollars typed as text into whole cents, without ever creating a float: a
-  // float cannot hold 0.01 exactly, and this number is about to be divided.
-  // Returns null when there is no amount yet.
-  #amountInCents() {
-    const digitsAndDot = this.amountTarget.value.replace(/[^0-9.]/g, "")
-    if (digitsAndDot === "") return null
-
-    const [ wholeDollars, fraction = "" ] = digitsAndDot.split(".")
-    const dollarCents = (parseInt(wholeDollars, 10) || 0) * 100
-    const fractionCents = parseInt(`${fraction}00`.slice(0, 2), 10) || 0
-    const totalCents = Math.min(dollarCents + fractionCents, this.maximumTotalCentsValue)
-
-    return totalCents === 0 ? null : totalCents
+  openConnection(event) {
+    this.connectionIndex = this.#index(event)
+    const row = this.rows[this.connectionIndex]
+    this.connectionNameTarget.value = row.name || ""
+    this.connectionPersonId = row.person_id || ""
+    this.connectionOriginalName = row.name || ""
+    this.connectionHandles = {}
+    const friend = this.friendTargets.find(button => button.dataset.personId === String(row.person_id))
+    if (friend) this.connectionHandles = {...friend.dataset}
+    this.methodTargets.forEach(input => { input.checked = input.value === (row.payment_method || "venmo") })
+    this.connectionAmountTarget.textContent = this.#money(row.amount_cents)
+    this.connectionErrorTarget.hidden = true
+    this.changeMethod()
+    if (row.handle) this.connectionHandleTarget.value = row.handle
+    this.dialogTarget.querySelector("[data-controller=contact-search-logic]").dispatchEvent(new Event("reset-contact-search"))
+    openSheet(this.dialogTarget, {onDismiss: () => this.closeConnection()})
   }
-
-  // Rule 2, the same arithmetic as SplitMath.even_shares: round down, then give
-  // the leftover cents one each to the first rows in order.
-  #evenShares(totalCents, peopleCount) {
-    const baseShare = Math.floor(totalCents / peopleCount)
-    const leftoverCents = totalCents - baseShare * peopleCount
-
-    return Array.from({ length: peopleCount }, (_, index) =>
-      index < leftoverCents ? baseShare + 1 : baseShare
-    )
+  closeConnection(event) {
+    event?.preventDefault()
+    this.dialogTarget.querySelector("[data-controller=contact-search-logic]").dispatchEvent(new Event("reset-contact-search"))
+    return closeSheet(this.dialogTarget)
   }
-
-  #renderRows(peopleCount, totalCents) {
-    this.#matchRowCount(peopleCount)
-
-    const shares = totalCents === null ? null : this.#evenShares(totalCents, peopleCount)
-
-    this.#rows().forEach((row, index) => {
-      row.querySelector("[data-share-row-name]").textContent = `Person ${index + 1}`
-      row.querySelector("[data-share-row-amount]").textContent =
-        shares === null ? "—" : this.#formattedDollars(shares[index])
-    })
-  }
-
-  // Adds and drops only the rows that changed, rather than rebuilding the list,
-  // so the aria-live region does not re-announce every row on every keystroke.
-  #matchRowCount(peopleCount) {
-    for (let index = this.#rows().length; index < peopleCount; index++) {
-      this.sharesTarget.append(this.shareRowTemplateTarget.content.cloneNode(true))
+  connectionKey(event) {
+    if (event.key === "Enter" && event.target === this.connectionHandleTarget) {
+      event.preventDefault()
+      this.confirmConnection()
     }
-
-    this.#rows().slice(peopleCount).forEach((row) => row.remove())
   }
-
-  #rows() {
-    return Array.from(this.sharesTarget.children)
+  editContact() {
+    this.connectionPersonId = ""
+    this.connectionOriginalName = ""
+    this.connectionHandles = {}
+    this.connectionHandleTarget.value = ""
+    this.connectionErrorTarget.hidden = true
   }
-
-  #renderCentNote(peopleCount, totalCents) {
-    const leftoverCents = totalCents === null ? 0 : totalCents % peopleCount
-
-    this.centNoteTarget.hidden = leftoverCents === 0
-    if (leftoverCents === 0) return
-
-    const whoPays = leftoverCents === 1
-      ? "Person 1 pays"
-      : `The first ${leftoverCents} people each pay`
-
-    this.centNoteTarget.textContent =
-      `${whoPays} one cent more, so the shares add up to ${this.#formattedDollars(totalCents)}.`
+  selectContact(event) {
+    const contact = event.detail
+    this.connectionPersonId = contact.id
+    this.connectionOriginalName = contact.name
+    this.connectionHandles = contact
+    this.changeMethod()
   }
-
-  #updateStepperButtons(peopleCount) {
-    this.decrementTarget.disabled = peopleCount <= this.minimumPeopleValue
-    this.incrementTarget.disabled = peopleCount >= this.maximumPeopleValue
+  changeMethod() {
+    const method = this.methodTargets.find(input => input.checked).value
+    this.handleFieldsTarget.hidden = method === "cash"
+    this.handleLabelTarget.textContent = {venmo: "Venmo username", cash_app: "Cash App $Cashtag", zelle: "Zelle email or phone", cash: ""}[method]
+    this.connectionHandleTarget.value = this.connectionHandles?.[{cash_app: "cashApp"}[method] || method] || ""
   }
+  async confirmConnection() {
+    const name = this.connectionNameTarget.value.trim()
+    const payment_method = this.methodTargets.find(input => input.checked).value
+    const handle = payment_method === "cash" ? "" : this.connectionHandleTarget.value.trim()
+    if (name !== this.connectionOriginalName || !name) {
+      this.connectionErrorTarget.textContent = "Choose a contact or create one from the search."
+      this.connectionErrorTarget.hidden = false
+      return
+    }
+    if (this.connectionPersonId && this.rows.some((row, index) => index !== this.connectionIndex && String(row.person_id) === String(this.connectionPersonId))) {
+      this.connectionErrorTarget.textContent = "This contact is already in the split."
+      this.connectionErrorTarget.hidden = false
+      return
+    }
+    if (!name || (payment_method !== "cash" && !handle)) {
+      this.connectionErrorTarget.textContent = !name ? "Enter a name." : `Enter ${this.handleLabelTarget.textContent.toLowerCase()}.`
+      this.connectionErrorTarget.hidden = false
+      return
+    }
+    Object.assign(this.rows[this.connectionIndex], {name, payment_method, handle,
+      person_id: name === this.connectionOriginalName ? this.connectionPersonId : ""})
+    await this.closeConnection()
+    this.#render()
+  }
+  prepareSubmit(event) {
+    if (!this.rows.length || !this.total || this.total < this.rows.length || this.#remaining() < 0) {
+      event.preventDefault()
+      this.errorTarget.textContent = !this.rows.length ? "Add a person." : !this.total ? "Enter a bill amount." : this.#remaining() < 0 ? "The shares exceed the bill." : "Allow at least 1¢ per person."
+      this.errorTarget.hidden = false
+    }
+  }
+  #remaining() { return this.total - this.rows.reduce((sum, row) => sum + row.amount_cents, 0) }
+  #money(cents) { return `$${Math.floor(cents / 100).toLocaleString("en-US")}${cents % 100 ? `.${String(cents % 100).padStart(2, "0")}` : ""}` }
 
-  // Formatted straight from the integer, so no float ever touches the money.
-  #formattedDollars(cents) {
-    const dollars = Math.floor(cents / 100).toLocaleString("en-US")
-    const remainder = String(cents % 100).padStart(2, "0")
-
-    return `$${dollars}.${remainder}`
+  #render() {
+    while (this.sharesTarget.children.length < this.rows.length) this.sharesTarget.append(this.shareRowTemplateTarget.content.cloneNode(true))
+    Array.from(this.sharesTarget.children).slice(this.rows.length).forEach(element => element.remove())
+    // One fixed scale for the whole draft, including a rejected lowered total.
+    const maximum = Math.max(this.total, ...this.rows.map(row => row.amount_cents), 1)
+    this.rows.forEach((row, index) => {
+      const element = this.sharesTarget.children[index]
+      const name = row.name || `Person ${index + 1}`
+      element.querySelector("[data-share-row-name]").textContent = name
+      const amount = element.querySelector("[data-share-row-amount]")
+      amount.textContent = this.total ? this.#money(row.amount_cents) : "—"
+      amount.setAttribute("aria-label", `Edit ${name}'s amount`)
+      const amountField = element.querySelector("[data-share-amount-field]")
+      amountField.value = row.amount_cents / 100
+      amountField.dataset.personName = name
+      amountField.dataset.maxCents = Math.max(0, this.#remaining() + row.amount_cents)
+      element.querySelector("[data-share-row-connection]").textContent = row.payment_method ? {venmo:"Venmo", cash_app:"Cash App", zelle:"Zelle", cash:"Cash"}[row.payment_method] : "Connect +"
+      element.querySelector(".draft-connect").setAttribute("aria-label", `Connect ${name}`)
+      const avatar = element.querySelector("[data-share-row-avatar]")
+      const words = name.split(/\s+/)
+      const tone = Array.from(name).reduce((sum, character) => sum + character.codePointAt(0), 0) % 5
+      avatar.className = `avatar avatar--small ${row.name ? `avatar--${tone}` : "avatar--placeholder"}`
+      avatar.textContent = row.name ? [words[0], words.length > 1 ? words.at(-1) : ""].map(word => word[0] || "").join("").toUpperCase() : index + 1
+      const slider = element.querySelector("[data-share-row-slider]")
+      slider.max = maximum
+      slider.value = row.amount_cents
+      slider.disabled = !this.total
+      slider.setAttribute("aria-label", `${name}'s share`)
+      slider.style.setProperty("--progress", `${row.amount_cents / maximum * 100}%`)
+      const percent = element.querySelector("[data-share-row-percent]")
+      percent.value = this.total ? (row.amount_cents * 100 / this.total).toFixed(1).replace(/\.0$/, "") : "0"
+      percent.disabled = !this.total
+      percent.setAttribute("aria-label", `${name}'s percentage`)
+      const remove = element.querySelector(".swipe-delete")
+      element.setAttribute("aria-label", `${name}. Swipe left or press Delete to remove.`)
+      element.dataset.swipeOpen = "false"
+      element.dataset.swipeCommit = "false"
+      element.querySelector("[data-swipe-logic-target=surface]").style.transform = ""
+      remove.hidden = true
+      remove.style.width = "56px"
+      remove.disabled = this.rows.length <= this.minimumPeopleValue
+      remove.setAttribute("aria-label", `Remove ${name}`)
+      element.querySelectorAll("[data-draft-field]").forEach(input => {
+        input.value = input.dataset.draftField === "locked" ? (row.locked ? "1" : "0") : row[input.dataset.draftField] || (input.dataset.draftField === "amount_cents" ? "0" : "")
+      })
+    })
+    const remaining = this.#remaining()
+    this.remainingLabelTarget.textContent = remaining < 0 ? "Over the bill by" : "You pay"
+    this.remainingTarget.textContent = this.total ? this.#money(Math.abs(remaining)) : "—"
+    this.remainingTarget.parentElement.dataset.over = String(remaining < 0)
+    this.countDisplayTarget.textContent = `${this.rows.length} ${this.rows.length === 1 ? "person" : "people"}`
+    this.addTarget.disabled = this.rows.length >= this.maximumPeopleValue
+    this.saveTarget.disabled = this.reviewTarget.disabled = !this.rows.length || remaining < 0
+    this.reviewTarget.hidden = !this.rows.some(row => row.payment_method)
+    this.errorTarget.hidden = true
+    this.centNoteTarget.hidden = !this.rows.length || this.custom || !this.total || this.total % this.rows.length === 0
+    this.centNoteTarget.textContent = "Includes a 1¢ rounding adjustment."
+    this.friendTargets.forEach(button => {
+      button.disabled = this.rows.some(row => String(row.person_id) === button.dataset.personId)
+      button.classList.toggle("is-connected", button.disabled)
+    })
   }
 }

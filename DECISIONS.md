@@ -799,3 +799,131 @@ rather than as the organizer's own share. "You pay $50.00" is what it actually m
 The Save button is no longer disabled for a leftover — there is nothing wrong with one. It is
 disabled only in the one state the sliders cannot produce: lowering the total underneath
 amounts already set, which reads "Over the bill by".
+
+
+## Local design pass — Connect, recent friends, and initial avatars
+
+The Figma draft establishes the black/turquoise direction and oversized amount. The web UI
+uses responsive layout rather than fixed canvas coordinates. Names sit below recent-friend
+avatars so every person has a separate, readable tap target; inside share cards, names sit
+beside amounts for scanning. Initials use a stable name-derived color across every screen.
+There is no photo/contact data in this app, so this pass uses initials instead of invented
+portraits or adding an upload feature.
+
+Connect replaces “Save and add names.” The draft may read recent people, but still writes
+nothing until Connect is pressed. The submitted IDs are resolved through the browser owner
+scope, deduplicated, and applied before the server calculates shares. Choosing more friends
+raises the head count. Removing a selection leaves a placeholder rather than silently
+reducing the group size.
+
+Recent quick adds reuse an unnamed seat first. A fully named group grows by one and follows
+the existing even/custom allocation rules. Repeated requests for an already connected
+friend are harmless. Naming uses two Turbo Stream replacements: the name and the recent
+list. The other rows keep their current slider values.
+
+### The lowered-total error needed a real browser check
+
+A range input automatically clamps a value above its maximum. Rendering $50 shares against
+a rejected $10 total therefore hid part of the excess before Stimulus could calculate it.
+The error view now keeps a common fixed range large enough to hold the existing values.
+It shows the actual $90 excess and disables Save amounts. Turbo morphing also keeps a
+Stimulus controller alive, so a value-change callback recomputes the button state when the
+total changes. Both save controls belong to the same bill form, ensuring a corrected
+allocation saves the new total too. A browser regression covers the complete correction.
+
+Validation: controller coverage for ownership, duplicate selections, quick additions, and
+seat reuse; browser coverage for recent selection and the rejected-total recovery, alongside
+the existing suite. No commits, pushes, deployment, or Figma writes are part of this pass.
+
+
+## Corrected draft flow — Add first, Connect per person
+
+The earlier interpretation of Connect as the primary save action was wrong. The calculator
+must stand on its own: Add creates an unnamed draft row, and sliders and exact percentage
+entry work before naming or persistence. The count is read-only. Recent friends append a new seat, even when unnamed seats exist. Each row's Connect dialog chooses a name and Venmo, Cash App, Zelle, or
+cash. Only Save split or Review requests writes anything.
+
+SplitDraft validates custom cents and owner-scoped people, and saves people and participants
+in one transaction. A validation failure rolls back new people as well as the bill. Untouched
+rows use the server's even split arithmetic. Custom rows retain their allocation and leave
+the unrequested amount for the organizer. The selected payment method belongs to a participant
+on this bill, while handles still belong to a person. Cash does not imply paid. Existing
+provider limitations still apply; choosing a method never sends a request by itself.
+
+### Gestures and amount entry
+
+Cards reveal Delete on a left swipe and remove on a full swipe. Pointer handling excludes
+inputs so slider dragging stays independent, and cancels on vertical movement so scrolling
+works normally. Keyboard ArrowLeft reveals Delete; Delete removes a focused card. Both draft
+and saved participants use the same small Stimulus controller.
+
+Both keypads use native dialogs for focus containment and Escape dismissal. Total entry keeps
+its backdrop clear and updates the existing large total live. Cancel restores the original
+value. Person entry uses the dark blur, a number outside the panel, and the person's name
+inside the panel. It applies only on Set amount and validates against the unclaimed balance.
+Whole-dollar figures omit .00 but retain real cents. Slider gestures round to whole dollars;
+exact manual entry and automatic even allocation retain cents.
+
+Drafts start at zero and can return to zero. Saving requires at least one person. Recent
+friend additions never replace an unnamed row. Saved custom additions append a zero-share
+card without replacing existing cards, preserving unsaved allocations.
+
+The visual palette is neutral graphite. Payment logos are local SVG assets from Simple Icons,
+with provenance in app/assets/images/payments/README.md. No third-party asset requests run in
+the browser. The original Figma frame remains inspiration, including its amount weight and
+fade; no Figma changes, commits, pushes, or deployment were made.
+
+### Mobile-only refinement
+
+The app keeps its mobile composition on large windows. Short swipes reveal a rounded icon
+button at roughly a quarter-card offset. Its red surface grows in width with the drag, then
+springs back to 56px on a partial release; a release beyond 85% commits deletion. Native range
+and vertical scrolling gestures stay independent. Real browser swipes cover both paths.
+
+Draft contact search uses a read-only, owner-scoped JSON endpoint with debouncing and aborts
+for stale queries. Empty search has no suggestions. Results and Create contact live below the
+input without resizing the drawer. Selecting a contact fills saved payment handles; selecting
+Create prepares the draft without writing yet. This is the app's saved list, not device contacts.
+
+Shared sheet motion retains native dialogs for focus and dismissal, uses visualViewport for
+software-keyboard clearance, and respects reduced motion. Underline focus expands from the
+center; the bill underline is tied to its open keypad rather than residual DOM focus. Local
+sample contacts can be added explicitly with the development-only dev:contacts rake task.
+
+### Reliable backdrop dismissal
+
+Sheets now use a full-viewport transparent dialog as the backdrop tap target and animate
+only the inner content. This avoids coordinate checks against a moving native dialog.
+The original event path distinguishes inside taps even when selecting a contact removes its
+result button before the click bubbles. Close motion starts from the sheet's current position,
+so tapping outside during entry reverses smoothly. Number edits cancel on dismissal, including
+restoring the live total; Connect discards unconfirmed changes.
+
+## A revealed swipe card closes itself after five seconds
+
+A card swiped part-way open shows a delete button and waits. Left alone it used to wait
+forever, which is wrong in two ways: it looks like something is pending, and the next tap on
+that row hits a destructive control the organizer has stopped thinking about.
+
+It now springs shut after five seconds. The timer starts in `reveal`, and is cancelled by
+`close`, by the start of a fresh drag, and by `disconnect` — the last so a pending timer never
+wakes up holding a card that has left the page.
+
+### It never closes under a keyboard user
+
+`ArrowLeft` reveals the card *and focuses the delete button*. Closing on a timer there would
+pull focus out from under somebody mid-decision, and could leave their next keypress landing
+somewhere else entirely. So when the timeout fires while focus is still inside the card, it
+re-arms instead of closing, and only closes once they move on.
+
+This is the kind of thing that works fine for a thumb and is hostile to everyone else, which
+is why there is a test for it.
+
+### Five seconds is a Stimulus value, not a constant
+
+`revealTimeout` defaults to 5000 and the system tests shorten it to 200ms. Waiting five real
+seconds in a suite that already runs eighty browser tests buys nothing, and shortening the
+value exercises exactly the same code path.
+
+The behavior was checked against the real default in a browser as well: the card read open at
+4508ms and closed at 5008ms.

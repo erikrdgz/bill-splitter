@@ -11,34 +11,27 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     get root_url
 
     assert_select "input[name=?]", "split[amount]"
-    assert_select "input[name=?][min=?][max=?]", "split[people_count]", "2", "20"
-    assert_select "button[aria-label=?]", "One fewer person"
-    assert_select "button[aria-label=?]", "One more person"
-    assert_select "input[type=submit][value=?]", "Save and add names"
+    assert_select "input[name=?][type=hidden]", "split[people_count]"
+    assert_select "button", text: "Add"
+    assert_select "[data-quick-split-logic-target=countDisplay]", text: "0 people"
+    assert_select "input[type=submit][value=?]", "Save split"
   end
 
   test "the screen starts at the minimum number of people" do
     get root_url
 
-    assert_select "input[name=?][value=?]", "split[people_count]", "2"
-    assert_select "ol[data-quick-split-logic-target='shares'] > li", 2
+    assert_select "input[name=?][value=?]", "split[people_count]", "0"
+    assert_select "ol[data-quick-split-logic-target='shares'] > li", 0
   end
 
-  # No amount typed yet, so no figures: the em dash is the empty state.
-  test "the share rows start empty because no amount has been entered" do
+  test "the draft has no placeholder cards before adding people" do
     get root_url
-
-    assert_select "ol[data-quick-split-logic-target='shares'] > li [data-share-row-amount]" do |amounts|
-      assert amounts.all? { |amount| amount.text == "—" }
-    end
+    assert_select "ol[data-quick-split-logic-target=shares] > li", 0
   end
 
-  test "the rows are named from their position" do
+  test "the card template starts with an unnamed first person" do
     get root_url
-
-    assert_select "ol[data-quick-split-logic-target='shares'] > li [data-share-row-name]" do |names|
-      assert_equal [ "Person 1", "Person 2" ], names.map(&:text)
-    end
+    assert_select "template [data-share-row-name]", text: "Person 1"
   end
 
   # The browser mirrors SplitMath's limits, so they are handed over as Stimulus
@@ -49,7 +42,7 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     get root_url
 
     assert_select "form[data-quick-split-logic-minimum-people-value=?]",
-                  SplitMath::PEOPLE_RANGE.min.to_s
+                  "0"
     assert_select "form[data-quick-split-logic-maximum-people-value=?]",
                   SplitMath::PEOPLE_RANGE.max.to_s
     assert_select "form[data-quick-split-logic-maximum-total-cents-value=?]",
@@ -104,13 +97,18 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
-  test "a split for one person is refused" do
+  test "a split without people is refused" do
     assert_no_difference -> { Split.count } do
-      post splits_url, params: { split: { amount: "100", people_count: "1" } }
+      post splits_url, params: { split: { amount: "100", people_count: "0" } }
     end
 
     assert_response :unprocessable_entity
-    assert_select "div[role=alert]", text: /between 2 and 20 people/
+    assert_select "div[role=alert]", text: /between 1 and 20 people/
+  end
+
+  test "a split can save a single person" do
+    split = create_split(amount: "100", people_count: 1)
+    assert_equal [ 10000 ], split.participants.map(&:amount_cents)
   end
 
   # A forged request could ask for a million rows. The controller builds at most
@@ -121,13 +119,80 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :unprocessable_entity
-    assert_select "div[role=alert]", text: /between 2 and 20 people/
+    assert_select "div[role=alert]", text: /between 1 and 20 people/
   end
 
   test "a refused split keeps what the organizer typed" do
     post splits_url, params: { split: { amount: "", people_count: "7" } }
 
     assert_select "input[name=?][value=?]", "split[people_count]", "7"
+  end
+
+  test "connecting recent friends saves the title and assigns owned people once" do
+    previous = create_split
+    friend = Person.create!(name: "Alex Rivera", owner_token: previous.owner_token)
+    post splits_url, params: { split: { amount: "90", title: "Dinner", people_count: "2",
+      person_ids: [ friend.id, friend.id ] } }
+
+    split = Split.order(:id).last
+    assert_equal "Dinner", split.title
+    assert_equal [ friend.id, nil ], split.participants.map(&:person_id)
+    assert_equal [ 4500, 4500 ], split.participants.map(&:amount_cents)
+  end
+
+  test "recent friends never reveal or accept another browser's people" do
+    get root_url
+    assert_select "input[value=?][type=checkbox]", people(:marissa).id.to_s, count: 0
+    assert_no_difference -> { Split.count } do
+      post splits_url, params: { split: { amount: "100", people_count: "2",
+        person_ids: [ people(:marissa).id ] } }
+    end
+    assert_response :not_found
+  end
+
+  test "a custom draft preserves shares and records cash without marking it paid" do
+    post splits_url, params: { intent: "request", split: { amount: "1000", title: "Dinner", people_count: "2",
+      draft_rows: [ { name: "Alex", payment_method: "cash", amount_cents: "20000", locked: "1" },
+                    { amount_cents: "20000", locked: "1" } ] } }
+    split = Split.order(:id).last
+    assert_redirected_to split_path(split)
+    assert_equal [ 20000, 20000 ], split.participants.map(&:amount_cents)
+    assert_equal 60000, split.remaining_cents
+    assert_equal "cash", split.participants.first.payment_method
+    assert_nil split.participants.first.paid_at
+    assert_equal "Alex", split.participants.first.person.name
+  end
+
+  test "an invalid allocation creates neither people nor a split" do
+    assert_no_difference [ -> { Split.count }, -> { Person.count } ] do
+      post splits_url, params: { split: { amount: "100", people_count: "2",
+        draft_rows: [ { name: "New friend", payment_method: "cash", amount_cents: "9000", locked: "1" },
+                      { amount_cents: "9000", locked: "1" } ] } }
+    end
+    assert_response :unprocessable_entity
+    assert_select "[role=alert]", text: /cannot come to more than the total/
+  end
+
+  test "a draft refuses foreign people and unknown payment methods" do
+    assert_no_difference -> { Split.count } do
+      post splits_url, params: { split: { amount: "100", people_count: "2",
+        draft_rows: [ { person_id: people(:marissa).id, amount_cents: "5000" }, { amount_cents: "5000" } ] } }
+    end
+    assert_response :not_found
+    assert_no_difference [ -> { Split.count }, -> { Person.count } ] do
+      post splits_url, params: { split: { amount: "100", people_count: "2",
+        draft_rows: [ { name: "Alex", payment_method: "unknown", amount_cents: "5000" }, { amount_cents: "5000" } ] } }
+    end
+    assert_response :unprocessable_entity
+  end
+
+  test "an invalid payment handle rolls back the entire draft" do
+    assert_no_difference [ -> { Split.count }, -> { Person.count } ] do
+      post splits_url, params: { split: { amount: "100", people_count: "2",
+        draft_rows: [ { name: "Alex", payment_method: "venmo", handle: "bad & handle", amount_cents: "5000" },
+                      { amount_cents: "5000" } ] } }
+    end
+    assert_response :unprocessable_entity
   end
 
   # Editing.

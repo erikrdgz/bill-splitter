@@ -1,98 +1,104 @@
 <% content_for :title, "Split a bill" %>
-
-<h1 class="text-2xl font-semibold tracking-tight">Split a bill</h1>
-<p class="mt-2 text-black/70">Enter the amount and how many people. No sign-up.</p>
-
-<%# scope: :split rather than model: @split, because the two fields are an
-    amount in dollars and a head count, and neither is a column on splits. The
-    server turns them into cents and participants on create. %>
-<%= form_with scope: :split, url: splits_path, class: "mt-8",
-              data: {
-                controller: "quick-split-logic",
-                quick_split_logic_minimum_people_value: @minimum_people,
-                quick_split_logic_maximum_people_value: @maximum_people,
-                quick_split_logic_maximum_total_cents_value: @maximum_total_cents
-              } do |form| %>
-
-  <%= render "shared/errors", record: @split %>
-
-  <div>
-    <%= form.label :amount, "Amount", class: "block font-medium" %>
-    <div class="mt-2 flex items-baseline gap-2 border-b-2 border-black focus-within:border-black">
-      <span aria-hidden="true" class="text-2xl">$</span>
-      <%# A text field with inputmode="decimal" rather than a number field: it
-          brings up the numeric keyboard on a phone, and it lets
-          QuickSplitLogic parse the digits itself instead of handing a float to
-          the browser. %>
-      <%= form.text_field :amount,
-                          value: @split.amount,
-                          inputmode: "decimal",
-                          autocomplete: "off",
-                          placeholder: "0.00",
-                          class: "w-full bg-transparent py-2 text-2xl tabular-nums " \
-                                 "focus:outline-none",
-                          data: {
-                            quick_split_logic_target: "amount",
-                            action: "input->quick-split-logic#recalculate"
-                          } %>
+<% content_for :page_class, "page--composer" %>
+<h1 class="sr-only">Split a bill</h1>
+<%= form_with scope: :split, url: splits_path, class: "composer", data: {
+  controller: "quick-split-logic", action: "submit->quick-split-logic#prepareSubmit",
+  quick_split_logic_minimum_people_value: @minimum_people,
+  quick_split_logic_maximum_people_value: @maximum_people,
+  quick_split_logic_maximum_total_cents_value: @maximum_total_cents,
+  quick_split_logic_draft_value: @draft_rows || []
+} do |form| %>
+  <div class="bill-panel">
+    <%= render "shared/errors", record: @split %>
+    <%= form.label :amount, "Amount", class: "sr-only" %>
+    <div class="amount-control" data-controller="amount-keypad-logic">
+    <div class="bill-amount bill-amount--draft">
+      <span aria-hidden="true">$</span>
+      <%= form.text_field :amount, value: @split.amount, inputmode: "decimal", autocomplete: "off",
+        placeholder: "0", class: "amount-input", maxlength: 10, readonly: true, aria: { haspopup: "dialog" },
+        data: { quick_split_logic_target: "amount", amount_keypad_logic_target: "field",
+          action: "input->quick-split-logic#recalculate click->amount-keypad-logic#open keydown->amount-keypad-logic#openKey" } %>
+    </div>
+    <%= render "shared/amount_keypad" %>
+    </div>
+    <%= form.label :title, "What's this for?", class: "sr-only" %>
+    <div class="line-field">
+    <%= form.text_field :title, value: @split.title, placeholder: "What’s this for?", maxlength: 80, class: "title-input" %>
+    </div>
+    <% if @recent_people.any? %>
+      <section class="recent-section" aria-labelledby="recent-heading">
+        <h2 id="recent-heading">Recent friends</h2>
+        <div class="friend-list">
+          <% @recent_people.each do |person| %>
+            <button type="button" class="friend-choice" aria-label="Add <%= person.name %>"
+              data-action="quick-split-logic#chooseFriend" data-person-id="<%= person.id %>"
+              data-friend-name="<%= person.name %>"
+              data-venmo="<%= person.venmo_handle %>" data-cash-app="<%= person.cashapp_cashtag %>"
+              data-zelle="<%= person.zelle_contact %>" data-quick-split-logic-target="friend">
+              <%= render "shared/avatar", name: person.name %>
+              <span class="friend-name"><%= person.name %></span>
+            </button>
+          <% end %>
+        </div>
+      </section>
+    <% end %>
+    <div class="connect-action">
+      <button type="button" class="connect-button" data-quick-split-logic-target="add" data-action="quick-split-logic#increment">Add</button>
     </div>
   </div>
-
-  <div class="mt-8">
-    <%= form.label :people_count, "People", class: "block font-medium" %>
-    <div class="mt-2 flex items-center gap-4">
-      <button type="button"
-              aria-label="One fewer person"
-              class="size-11 border-2 border-black text-xl leading-none
-                     disabled:border-black/25 disabled:text-black/25"
-              data-quick-split-logic-target="decrement"
-              data-action="quick-split-logic#decrement">&minus;</button>
-
-      <%# The stepper accepts typing as well as tapping, per the spec. Both go
-          through the same clamp, so neither can produce a head count the server
-          would refuse. %>
-      <%= form.number_field :people_count,
-                            value: @people_count,
-                            min: @minimum_people,
-                            max: @maximum_people,
-                            step: 1,
-                            inputmode: "numeric",
-                            class: "w-16 border-b-2 border-black bg-transparent py-2 " \
-                                   "text-center text-2xl tabular-nums focus:outline-none",
-                            data: {
-                              quick_split_logic_target: "peopleCount",
-                              action: "input->quick-split-logic#recalculate " \
-                                      "change->quick-split-logic#normalizePeopleCount"
-                            } %>
-
-      <button type="button"
-              aria-label="One more person"
-              class="size-11 border-2 border-black text-xl leading-none
-                     disabled:border-black/25 disabled:text-black/25"
-              data-quick-split-logic-target="increment"
-              data-action="quick-split-logic#increment">+</button>
+  <section class="shares-panel" aria-labelledby="shares-heading">
+    <div class="section-heading">
+      <h2 id="shares-heading">Each person pays</h2>
+      <span class="people-count" data-quick-split-logic-target="countDisplay" aria-live="polite"><%= pluralize(@people_count, "person") %></span>
+      <%= form.hidden_field :people_count, value: @people_count, data: { quick_split_logic_target: "peopleCount" } %>
     </div>
-  </div>
-
-  <%# aria-live="polite" so a screen reader hears the new shares once the typing
-      stops, rather than on every keystroke. QuickSplitLogic adds and removes
-      only the rows that changed, so the whole list is not re-announced. %>
-  <section class="mt-10" aria-live="polite">
-    <h2 class="font-medium">Each person pays</h2>
-    <ol class="mt-2" data-quick-split-logic-target="shares">
-      <%= render partial: "share_row", collection: (1..@people_count).to_a, as: :position %>
+    <ol class="share-cards" data-quick-split-logic-target="shares">
+      <%= render partial: "share_row", collection: (1..@people_count.clamp(0, 20)).to_a, as: :position %>
     </ol>
-
-    <template data-quick-split-logic-target="shareRowTemplate">
-      <%= render "share_row", position: 1 %>
-    </template>
-
-    <p class="mt-3 text-sm text-black/70"
-       data-quick-split-logic-target="centNote"
-       hidden></p>
+    <template data-quick-split-logic-target="shareRowTemplate"><%= render "share_row", position: 1 %></template>
+    <div class="draft-remainder" aria-live="polite">
+      <span data-quick-split-logic-target="remainingLabel">You pay</span>
+      <strong data-quick-split-logic-target="remaining">—</strong>
+    </div>
+    <div class="draft-tools">
+      <button type="button" class="text-button" data-action="quick-split-logic#splitEvenly">Split evenly</button>
+      <%= form.submit "Save split", class: "text-button", data: { quick_split_logic_target: "save" } %>
+    </div>
+    <p class="helper" data-quick-split-logic-target="centNote" hidden></p>
+    <p class="form-error" role="alert" data-quick-split-logic-target="error" hidden></p>
+    <button type="submit" name="intent" value="request" class="primary-button mt-4"
+      data-quick-split-logic-target="review" hidden>Review requests</button>
   </section>
-
-  <%= form.submit "Save and add names",
-                  class: "mt-10 w-full border-2 border-black bg-black px-4 py-3 " \
-                         "font-medium text-white" %>
+  <dialog class="connection-sheet" data-quick-split-logic-target="dialog" aria-labelledby="connection-title" data-action="cancel->quick-split-logic#closeConnection keydown->quick-split-logic#connectionKey">
+    <div class="sheet-content">
+    <div class="sheet-heading"><h2 id="connection-title" tabindex="-1" data-sheet-focus>Connect a friend</h2><button type="button" aria-label="Close connection" data-action="quick-split-logic#closeConnection">×</button></div>
+    <p class="connection-amount" data-quick-split-logic-target="connectionAmount"></p>
+    <div class="contact-search" data-controller="contact-search-logic"
+      data-contact-search-logic-url-value="<%= search_people_path %>"
+      data-action="focusout->contact-search-logic#leave reset-contact-search->contact-search-logic#reset contact-search-logic:edit->quick-split-logic#editContact contact-search-logic:select->quick-split-logic#selectContact">
+      <label for="connection_name">Name</label>
+      <div class="line-field">
+        <input id="connection_name" type="text" maxlength="40" autocomplete="off" placeholder="Search contacts"
+          role="combobox" aria-autocomplete="list" aria-controls="contact-results" aria-expanded="false"
+          data-quick-split-logic-target="connectionName" data-contact-search-logic-target="input"
+          data-action="input->contact-search-logic#search keydown->contact-search-logic#key">
+      </div>
+      <div id="contact-results" class="contact-results" role="listbox" aria-label="Contacts" data-contact-search-logic-target="results" hidden></div>
+      <p class="contact-search-status" role="status" data-contact-search-logic-target="status"></p>
+    </div>
+    <fieldset class="payment-choices">
+      <legend>Pay with</legend>
+      <% Participant::PAYMENT_METHODS.each do |value, label| %>
+        <label><input type="radio" name="connection_method" value="<%= value %>" <%= 'checked' if value == 'venmo' %>
+          data-quick-split-logic-target="method" data-action="quick-split-logic#changeMethod"><span><%= image_tag "payments/#{value}.svg", alt: "", class: "payment-logo payment-logo--#{value}" %><%= label %></span></label>
+      <% end %>
+    </fieldset>
+    <div data-quick-split-logic-target="handleFields">
+      <label for="connection_handle" data-quick-split-logic-target="handleLabel">Venmo username</label>
+      <div class="line-field"><input id="connection_handle" type="text" autocomplete="off" autocapitalize="none" data-quick-split-logic-target="connectionHandle"></div>
+    </div>
+    <p class="form-error" role="alert" data-quick-split-logic-target="connectionError" hidden></p>
+    <button type="button" class="primary-button mt-6" data-action="quick-split-logic#confirmConnection">Connect</button>
+    </div>
+  </dialog>
 <% end %>

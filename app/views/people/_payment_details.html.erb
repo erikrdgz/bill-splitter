@@ -6,7 +6,7 @@
     beside it, and leaving those stale would be worse than a page reload. %>
 <turbo-frame id="<%= dom_id(person, :payment) %>" class="block">
   <% if person.any_payment_handle? %>
-    <p class="text-sm text-black/70">
+    <p class="text-sm text-muted">
       <%= PaymentLink::APPS.filter_map { |app|
             next if person.handle_for(app).blank?
             "#{PaymentLink::NAMES.fetch(app)} #{person.handle_for(app)}"

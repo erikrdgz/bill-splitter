@@ -85,9 +85,9 @@ class SharesTest < ApplicationSystemTestCase
 
   def open_editor_and_share
     visit root_path
-    fill_in "Amount", with: "100"
-    fill_in "People", with: "3"
-    click_on "Save and add names"
+    enter_bill_amount("100")
+    set_people_count("3")
+    click_on "Save split"
     assert_selector "h1", text: "Edit split"
 
     click_on "Share and request money"

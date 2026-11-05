@@ -2,7 +2,7 @@
     before handing the link around. %>
 <turbo-frame id="payment_profile" class="block">
   <% if payment_profile.any_payment_handle? %>
-    <p class="text-sm text-black/70">
+    <p class="text-sm text-muted">
       Friends can pay you at
       <%= PaymentLink::APPS.filter_map { |app|
             next if payment_profile.handle_for(app).blank?
@@ -12,7 +12,7 @@
     <%= link_to "Change how you get paid", edit_payment_profile_path,
                 class: "text-sm underline underline-offset-4" %>
   <% else %>
-    <p class="text-sm text-black/70">
+    <p class="text-sm text-muted">
       Add your Venmo or Cash App and friends can pay you straight from the share page.
     </p>
     <%= link_to "Add how you get paid", edit_payment_profile_path,

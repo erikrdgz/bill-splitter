@@ -31,19 +31,20 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <%# Mobile-first: one readable column that fills a 375 px phone and centres
-      itself on a desktop. Black and white only until the design pass lands. %>
-  <body class="bg-white text-black antialiased">
-    <main class="mx-auto w-full max-w-md px-4 py-10">
-      <header class="mb-8 flex items-baseline justify-between border-b border-black/20 pb-3">
-        <%= link_to "Bill Splitter", root_path, class: "font-semibold" %>
-        <%= link_to "Your splits", splits_path,
-                    class: "text-sm underline underline-offset-4" %>
+  <body class="app-body antialiased">
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="app-shell">
+      <header class="app-header">
+        <%= link_to root_path, class: "wordmark", aria: { label: "Bill Splitter" } do %><span>$</span>plit.<% end %>
+        <nav aria-label="Main navigation">
+          <%= link_to "New split", root_path, class: current_page?(root_path) ? "active" : nil %>
+          <%= link_to "Your splits", splits_path, class: current_page?(splits_path) ? "active" : nil %>
+        </nav>
       </header>
-
-      <%= render "shared/flash", message: flash[:notice] %>
-
-      <%= yield %>
-    </main>
+      <main id="main" class="page <%= content_for(:page_class) %>">
+        <%= render "shared/flash", message: flash[:notice] %>
+        <%= yield %>
+      </main>
+    </div>
   </body>
 </html>

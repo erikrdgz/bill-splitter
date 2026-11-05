@@ -1,12 +1,10 @@
-<%# Picking a name is a real request: a PATCH that writes person_id to the row
-    and answers with the row's name frame. No client-side state to get out of
-    step with the database. %>
 <li>
-  <%= form_with url: split_participant_path(participant.split, participant),
-                method: :patch,
-                data: { turbo_frame: dom_id(participant, :name) } do |form| %>
+  <%= form_with url: split_participant_path(participant.split, participant), method: :patch,
+    data: { turbo_frame: dom_id(participant, :name) } do |form| %>
     <%= form.hidden_field "participant[person_id]", value: person.id %>
-    <%= form.submit person.name,
-                    class: "w-full border-b border-black/15 py-2 text-left" %>
+    <%= form.button class: "picker-result", aria: { label: person.name } do %>
+      <%= render "shared/avatar", name: person.name, small: true %>
+      <span><%= person.name %></span>
+    <% end %>
   <% end %>
 </li>

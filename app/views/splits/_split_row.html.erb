@@ -1,18 +1,18 @@
 <%# One split in the history list: what it was, when, what it came to, and what
     is still outstanding. The whole row is the link, so it is a comfortable tap
     target on a phone rather than a word to aim at. %>
-<li class="border-t border-black/20">
+<li class="history-card">
   <%= link_to split_path(split), class: "flex items-baseline justify-between gap-3 py-4" do %>
     <span class="min-w-0">
       <span class="block truncate font-medium"><%= split.title %></span>
-      <span class="block text-sm text-black/60">
+      <span class="block text-sm text-muted">
         <%= split.created_at.to_date.strftime("%b %-d, %Y") %>
       </span>
     </span>
 
     <span class="shrink-0 text-right">
       <span class="block font-medium tabular-nums"><%= money(split.total_cents) %></span>
-      <span class="block text-sm text-black/60 tabular-nums">
+      <span class="block text-sm text-muted tabular-nums">
         <%= split.fully_paid? ? "All paid" : "#{money(split.owed_cents)} owed" %>
       </span>
     </span>

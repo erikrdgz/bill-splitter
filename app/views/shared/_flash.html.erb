@@ -5,7 +5,7 @@
     <%# role="alert" interrupts, role="status" waits for a pause. A refused
         action is worth interrupting for; a save confirmation is not. %>
     <p role="<%= local_assigns[:alert] ? 'alert' : 'status' %>"
-       class="mb-6 border-2 border-black px-4 py-3">
+       class="mb-6 border-2 border-line px-4 py-3">
       <%= message %>
     </p>
   <% end %>

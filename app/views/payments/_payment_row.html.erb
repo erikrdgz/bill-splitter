@@ -7,26 +7,27 @@
 
     `payable` is false on the organizer's own page, where the rows are a report
     rather than something to act on. %>
-<li id="<%= dom_id(participant) %>" class="border-t border-black/20 py-3">
+<li id="<%= dom_id(participant) %>" class="participant-card payment-card">
   <div class="flex items-baseline justify-between gap-3">
-    <span class="<%= "text-black/50" if participant.paid? %>">
+    <span class="payment-name <%= "text-muted" if participant.paid? %>">
+      <%= render "shared/avatar", name: participant.display_name, small: true %>
       <%= participant.display_name %>
     </span>
 
     <span class="flex shrink-0 items-baseline gap-3">
-      <span class="font-medium tabular-nums <%= "text-black/50 line-through" if participant.paid? %>"
+      <span class="font-medium tabular-nums <%= "text-muted line-through" if participant.paid? %>"
             data-row-amount>
         <%= money(participant.amount_cents) %>
       </span>
 
       <% if participant.paid? %>
-        <span class="w-24 text-right text-sm text-black/60">
+        <span class="w-24 text-right text-sm text-muted">
           Paid <%= participant.paid_at.to_date.strftime("%b %-d") %>
         </span>
       <% elsif payable %>
         <%= button_to "I paid",
                       share_payment_path(split.share_token, participant),
-                      class: "w-24 border-2 border-black px-2 py-1 text-sm font-medium",
+                      class: "w-24 border-2 border-line px-2 py-1 text-sm font-medium",
                       form: {
                         data: {
                           turbo_confirm: "Mark #{participant.display_name} as paid? " \
@@ -34,18 +35,22 @@
                         }
                       } %>
       <% else %>
-        <span class="w-24 text-right text-sm text-black/60">Unpaid</span>
+        <span class="w-24 text-right text-sm text-muted">Unpaid</span>
       <% end %>
     </span>
   </div>
 
   <%# Settling up, for whoever is reading their own row on the share page. The
       handles are the organizer's: this is money going to them. %>
-  <% if payable && !participant.paid? && payment_profile&.any_payment_handle? %>
+  <% if participant.payment_method == "cash" && !participant.paid? %>
+    <p class="mt-2 text-sm text-muted">Paying in cash</p>
+  <% elsif payable && !participant.paid? && payment_profile&.any_payment_handle? %>
     <%= render "payments/app_options",
                links: payment_links_for(payment_profile,
                                         amount_cents: participant.amount_cents,
                                         note: split.title,
-                                        direction: :pay) %>
+                                        direction: :pay, payment_method: participant.payment_method) %>
   <% end %>
 </li>
+
+<%# Cash remains unpaid until explicitly confirmed, just like every other method. %>

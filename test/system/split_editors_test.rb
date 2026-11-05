@@ -3,10 +3,10 @@ require "application_system_test_case"
 class SplitEditorsTest < ApplicationSystemTestCase
   test "saving a quick split opens the editor with the shares already worked out" do
     visit root_path
-    fill_in "Amount", with: "100"
-    fill_in "People", with: "3"
+    enter_bill_amount("100")
+    set_people_count("3")
 
-    click_on "Save and add names"
+    click_on "Save split"
 
     assert_selector "h1", text: "Edit split"
     assert_field "What was it for?", with: "Split on #{Date.current.strftime('%B %-d')}"
@@ -28,7 +28,7 @@ class SplitEditorsTest < ApplicationSystemTestCase
   test "changing the total respreads the shares" do
     open_editor_for "100", 3
 
-    fill_in "Total bill", with: "90"
+    enter_bill_amount("90", label: "Total bill")
     click_on "Save name and total"
 
     # Wait for the saved page before reading the rows: all() does not retry, so
@@ -41,7 +41,7 @@ class SplitEditorsTest < ApplicationSystemTestCase
   test "a total that leaves somebody nothing is refused and nothing is saved" do
     editor_url = open_editor_for "100", 3
 
-    fill_in "Total bill", with: "0.02"
+    enter_bill_amount("0.02", label: "Total bill")
     click_on "Save name and total"
 
     assert_text "must be at least one cent per person"
@@ -60,9 +60,9 @@ class SplitEditorsTest < ApplicationSystemTestCase
 
   def open_editor_for(amount, people_count)
     visit root_path
-    fill_in "Amount", with: amount
-    fill_in "People", with: people_count
-    click_on "Save and add names"
+    enter_bill_amount(amount)
+    set_people_count(people_count)
+    click_on "Save split"
     assert_selector "h1", text: "Edit split"
 
     current_url

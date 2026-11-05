@@ -2,7 +2,7 @@
     rule that a split must add up is reported here rather than beside a single
     field — it is a fact about the whole set of rows, not about one of them. %>
 <% if record&.errors&.any? %>
-  <div class="mb-6 border-2 border-black p-4" role="alert">
+  <div class="mb-6 border-2 border-line p-4" role="alert">
     <h2 class="font-medium">
       <%= pluralize(record.errors.count, "problem") %> with this split
     </h2>

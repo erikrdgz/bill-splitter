@@ -47,7 +47,7 @@ Five features, each small on its own, that together feel like a finished product
 
 | Feature | What it does | Done when |
 | --- | --- | --- |
-| Quick split | Amount plus a people stepper (tap + or −, or type the number) shows each share instantly. No sign-up. | $100 for 3 people shows $33.34, $33.33, $33.33, and the shares always add up to the total. |
+| Quick split | Amount plus Add and a read-only people count shows each share instantly. No sign-up. | $100 for 3 people shows $33.34, $33.33, $33.33, and the shares always add up to the total. |
 | Name the people | Each placeholder ("Person 3") can become a saved person through search-as-you-type, or a new name added on the spot. | Searching "ma" narrows to matching saved names. A new name is saved for next time. |
 | Custom split | Adjust any person's share. The leftover spreads evenly across people you haven't touched, and touched people lock. | The shares can never come to more than the total. A remaining amount is always visible, and it is the part the organizer pays themselves. The server rejects a split whose shares exceed the total. |
 | Share link | One public link per split. A friend opens it, sees what they owe, and taps "I paid." | The link works without an account. The organizer sees who has paid. A wrong link shows a not-found page. |
@@ -66,8 +66,8 @@ chat's call.
 
 | Screen | Must contain | States to design | Interactions |
 | --- | --- | --- | --- |
-| Quick split (home) | Amount field, people stepper with count, each person's share, a note when one person pays a cent more, a "Save and add names" action | No amount yet; 2 people (minimum); 20 people (maximum) | Share updates on every keystroke and tap, no waiting. Stepper accepts typing too. |
-| Split editor | Title, total, a row per person (name or placeholder, amount, percent, slider, lock), add person, remove person, Even / Custom switch, remaining amount, Share action | Even mode; Custom mode mid-edit; error when the total doesn't add up; a row being added or removed | Dragging one slider sets that row only; everyone else stays put. Touched rows lock; tapping the lock frees them for "Spread the rest evenly". Saving is refused until the remaining amount is zero. |
+| Quick split (home) | Amount keypad, read-only people count, each person's share, a note when one person pays a cent more, an Add action, per-person Connect, custom sliders, and organizer remainder | No amount yet; 0 people in a new draft; 20 people (maximum) | Share updates on every keystroke and tap, no waiting. Add grows the group; swipe a card left to remove. A card swiped part-way open waits five seconds for a tap and then springs shut on its own, unless the keyboard is inside it. |
+| Split editor | Title, total, a row per person (name or placeholder, amount, percent, slider, lock), add person, remove person, Even / Custom switch, remaining amount, Share action | Even mode; Custom mode mid-edit; error when the total doesn't add up; a row being added or removed | Dragging one slider sets that row only; everyone else stays put. Touched rows lock; tapping the lock frees them for "Spread the rest evenly". Saving is refused only when requested shares exceed the bill. |
 | People search | Search field, matching saved people, "Add [name] as new person" when nothing matches | No saved people yet; no matches; results | Results narrow as you type. Picking a person fills the row. |
 | Share page (friend view) | Split title, total, each person and their amount, an "I paid" action on each unpaid row | Nobody paid; some paid; all paid; link not found | Tapping "I paid" asks to confirm the name, then marks it. No login. |
 | Split detail (organizer) | Who has paid and who hasn't, amount still owed, copy-link action, edit action | Nothing paid; partly paid; fully paid | Copy link confirms it copied. |
@@ -85,7 +85,7 @@ chat's call.
 
 ## Split math rules
 
-Money is stored as whole cents, and every split adds up to the total exactly. These rules live
+Money is stored as whole cents. Requested shares plus the organizer remainder equal the bill. These rules live
 in one plain Ruby class, `SplitMath`, and the browser mirrors them only for instant feedback.
 The server always has the final say.
 
@@ -111,10 +111,12 @@ The server always has the final say.
    at value ÷ max, so changing one row's maximum slid its thumb without changing a cent behind
    it — every slider appeared to follow the one being dragged. Reducing one person's share
    should move nothing but that share and the remaining figure.*
-5. **Percentages are display only.** They're worked out from cents and shown to one decimal.
-   Cents are the source of truth.
-6. **Limits.** 2 to 20 people. The total is at least 1 cent per person and at most $99,999.99.
+5. **Cents are the source of truth.** Percentages are derived from cents. Editing a draft
+   percentage converts it to whole cents and applies the same ceiling as dragging.
+6. **Limits.** A draft starts with 0 people; saved splits have 1 to 20 people. The total is at least 1 cent per person and at most $99,999.99.
    No negative amounts.
+
+   On a rejected total reduction, the sliders temporarily share a range large enough to display the existing amounts unchanged. The over-bill state blocks saving until corrected.
 
 Currency is assumed to be US dollars for v1.
 
@@ -126,7 +128,7 @@ saved `Person`, or stay an unnamed placeholder.
 | Table | Columns | Validations and notes |
 | --- | --- | --- |
 | splits | `title` (string), `total_cents` (integer), `split_mode` (even or custom), `share_token` (string, unique), `owner_token` (string), timestamps | Title required, 80 characters max. Total above 0 and at most 9,999,999. Participants add up to the total. `has_secure_token :share_token` makes the link hard to guess. |
-| participants | `split_id`, `person_id` (optional), `position` (integer), `amount_cents` (integer), `locked` (boolean), `paid_at` (datetime, empty until paid), timestamps | 2 to 20 per split. Amount 0 or more. `position` sets list order and who gets the leftover cent. A placeholder shows "Person 3" from its position. |
+| participants | `split_id`, `person_id` (optional), `position` (integer), `amount_cents` (integer), `locked` (boolean), `paid_at` (datetime, empty until paid), timestamps | 1 to 20 per saved split. Amount 0 or more. `position` sets list order and who gets the leftover cent. A placeholder shows "Person 3" from its position. |
 | people | `name` (string), `owner_token` (string), timestamps | Name required, 40 characters max, unique per owner. Searched by name for the people picker. |
 
 ### Associations
@@ -259,3 +261,77 @@ follow while the build runs.
   everyone's.
 - Is 20 people the right maximum?
 - US dollars only for v1? Assumed: yes.
+
+
+## Local design pass — revised November 5, 2026
+
+The main circular button is **Add**: it adds an unnamed person immediately, without saving
+or navigating. The first screen supports quick even splits and custom sliders. Entering
+$1,000 for six people must show each share immediately. Lowering requested shares leaves
+an explicit “You pay” remainder. Connect belongs to each participant, after the amounts
+are visible. It identifies the person and chooses Venmo, Cash App, Zelle, or cash; it does
+not send a request or mark anything paid. Reviewing requests is a separate final action.
+
+Recent friends are one-tap additions to the draft. Names sit beneath initial avatars.
+The large total uses stronger weight and a dark fade inspired by the Figma draft. Remove
+instructional subtext where the controls explain themselves. Preserve meaningful validation
+and honest payment-provider limitations at the request step.
+
+Draft math runs in Stimulus and writes nothing until explicitly saved or reviewed. The
+server validates submitted custom cents and all owner-scoped people. Payment method belongs
+to a participant on a particular bill; contact handles stay on the saved person. Cash is an
+expected payment method, not a paid status. Changes remain local for review.
+
+
+### Interaction refinements
+
+- The people count is read-only. Add is the only add control; there are no plus/minus counter buttons.
+- Swipe a participant card left to reveal Delete; a full swipe removes it. Keyboard Delete
+  also works from the focused card. A draft can return to zero; a saved split keeps at least
+  one person. Sliders keep
+  their native drag gesture and never trigger deletion.
+- Drafts start empty. Add appends an unnamed card; a recent friend always appends a new card,
+  even when unnamed people already exist. Connecting a friend to a specific row is separate.
+- Slider gestures and arrow keys move in whole dollars. The ceiling rounds down to the
+  available whole dollar. Untouched even shares retain their cent rounding. Tapping a person's
+  amount allows exact cents (including zero), without changing anyone else's share.
+- Tapping the total opens a dark keypad with a clear backdrop. Typing updates the existing
+  large total and draft calculation live; Cancel or Escape restores the original total.
+- Tapping a person's amount opens a separate dimmed, blurred view. The large number sits
+  outside the keypad panel; the person's name appears inside it. Set amount applies the edit;
+  Cancel or Escape discards it. An amount above the available share shows an error.
+- Payment choices use locally stored Venmo, Cash App, and Zelle logos and a cash icon.
+  Neutral graphite surfaces keep their brand colors and the turquoise action accent distinct.
+
+### Mobile motion and contact selection
+
+- Use one mobile column at every viewport width; wider windows center that same composition.
+  The bill amount is centered, and its currency symbol and empty zero share the same color.
+- A swipe of about a quarter of a card reveals a rounded trash icon to tap. Its red surface
+  widens with the exposed space during the drag. Releasing below the delete threshold springs
+  it back to a compact 56px button; releasing after at least 85% of the card width removes it directly. Sliders and vertical scrolling remain
+  separate gestures. The same behavior applies to draft and saved participant cards.
+- Connect starts with a blank contact search, not a list of recent names. Search the browser's
+  saved contacts while typing; selecting a result loads its payment details. If the exact name
+  is missing, offer Create contact inside the suggestion list. Creating here prepares the draft;
+  Save split or Review requests persists it. This does not access the device address book.
+- Focus on text fields expands a thin teal underline from the center. Opening a drawer focuses
+  its heading, without forcing the software keyboard or a rectangular input outline. Closing
+  amount entry returns focus without leaving the total's active underline behind.
+- Sheets enter over 280ms and exit over 170ms; key presses and Add have restrained press feedback.
+  The phone's visual viewport keeps sheets above its keyboard. Reduced-motion preferences bypass
+  movement and transitions. Native focus containment and Escape dismissal remain available.
+- Development preview contacts are explicit local seed data, never production defaults.
+
+A committed swipe finishes with a short red-surface fade and a 280ms row collapse, overlapping
+for a roughly 400ms exit. Remaining cards retain their DOM identity. A rejected saved deletion
+restores the card; reduced-motion mode skips the exit animation.
+
+Tapping the backdrop dismisses either number editor or Connect with the existing exit motion.
+It cancels unconfirmed edits, including restoring the live total. A gesture that starts inside
+the editor and ends outside does not dismiss it. Swipe exits fade the whole card before its
+height becomes a thin strip, preventing clipped contents or focus outlines from flashing.
+
+For local design review, an explicit development-only preview flag can seed each empty browser
+with its own sample contacts. Existing contact lists are untouched; no records are shared across
+browser owners. The flag is an ignored local file, and production never enables this behavior.

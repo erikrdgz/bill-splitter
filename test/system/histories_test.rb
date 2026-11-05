@@ -64,9 +64,9 @@ class HistoriesTest < ApplicationSystemTestCase
 
   def save_split_called(title, amount:, people_count:)
     visit root_path
-    fill_in "Amount", with: amount
-    fill_in "People", with: people_count
-    click_on "Save and add names"
+    enter_bill_amount(amount)
+    set_people_count(people_count)
+    click_on "Save split"
     assert_selector "h1", text: "Edit split"
 
     fill_in "What was it for?", with: title

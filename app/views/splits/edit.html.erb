@@ -1,65 +1,48 @@
 <% content_for :title, @split.title %>
 
-<h1 class="text-2xl font-semibold tracking-tight">Edit split</h1>
-
-<%# The title and total are one form. The rows are not inside it: adding,
-    naming and removing a person are each their own request, and a form cannot
-    be nested inside another form. %>
-<%= form_with model: @split, class: "mt-8" do |form| %>
+<div class="editor-heading">
+  <h1 class="page-heading">Edit split</h1>
+  <%= link_to "View split →", split_path(@split) %>
+</div>
+<%= form_with model: @split, class: "editor-bill", id: "split_amounts" do |form| %>
   <%= render "shared/errors", record: @split %>
-
-  <div>
-    <%= form.label :title, "What was it for?", class: "block font-medium" %>
-    <%= form.text_field :title,
-                        maxlength: 80,
-                        class: "mt-2 w-full border-b-2 border-black bg-transparent py-2 " \
-                               "text-lg focus:outline-none" %>
+  <%= form.label :amount, "Total bill", class: "field-label" %>
+  <div class="amount-control" data-controller="amount-keypad-logic">
+  <div class="bill-amount">
+    <span aria-hidden="true">$</span>
+    <%= form.text_field :amount, inputmode: "decimal", autocomplete: "off", class: "amount-input", readonly: true, aria: { haspopup: "dialog" },
+      data: { amount_keypad_logic_target: "field", action: "click->amount-keypad-logic#open keydown->amount-keypad-logic#openKey" } %>
   </div>
-
-  <div class="mt-8">
-    <%= form.label :amount, "Total bill", class: "block font-medium" %>
-    <div class="mt-2 flex items-baseline gap-2 border-b-2 border-black">
-      <span aria-hidden="true" class="text-2xl">$</span>
-      <%= form.text_field :amount,
-                          inputmode: "decimal",
-                          autocomplete: "off",
-                          class: "w-full bg-transparent py-2 text-2xl tabular-nums " \
-                                 "focus:outline-none" %>
-    </div>
+  <%= render "shared/amount_keypad" %>
   </div>
-
-  <%= form.submit "Save name and total",
-                  class: "mt-6 w-full border-2 border-black bg-black px-4 py-3 " \
-                         "font-medium text-white" %>
+  <%= form.label :title, "What was it for?", class: "sr-only" %>
+  <%= form.text_field :title, maxlength: 80, class: "title-input" %>
+  <%= form.submit "Save name and total", class: "details-save" %>
 <% end %>
+<%= render "splits/recent_friends", split: @split, people: @recent_people %>
 
 <%# data-controller sits on the section so SplitLogic can see the rows, the
     remaining figure and the save button together. In even mode there are no
     sliders for it to drive, and it simply has nothing to do. %>
-<section class="mt-12"
+<section class="split-section"
          data-controller="split-logic"
          data-split-logic-total-cents-value="<%= @split.total_cents %>">
-  <div class="flex items-baseline justify-between">
+  <div class="section-heading">
     <h2 class="font-medium">Each person pays</h2>
 
     <%# Two submit buttons in one form, each sending its own split_mode. %>
-    <%= form_with model: @split, class: "flex", id: "split_mode" do |form| %>
+    <%= form_with model: @split, class: "mode-switch", id: "split_mode" do |form| %>
       <% Split.split_modes.each_key do |mode| %>
         <%= form.button mode.titleize,
                         name: "split[split_mode]",
                         value: mode,
-                        class: class_names(
-                          "border-2 border-black px-3 py-1 text-sm",
-                          "bg-black text-white" => @split.split_mode == mode,
-                          "border-s-0" => mode != Split.split_modes.keys.first
-                        ),
                         aria: { pressed: @split.split_mode == mode } %>
       <% end %>
     <% end %>
   </div>
 
   <% if @split.custom? %>
-    <p class="mt-2 text-sm text-black/70">
+    <p class="helper mb-4">
       Drag a share to set it. Everyone else stays where they are, and anything
       you don't hand out is what you pay.
     </p>
@@ -68,32 +51,25 @@
   <%= render "splits/participants", split: @split %>
   <%= render "splits/remaining", split: @split %>
 
-  <%# The amounts form holds no fields of its own. The sliders and locks live up
-      in the rows and point at it with the HTML form attribute. %>
+  <%# The form attribute connects these controls to the bill form above, so a
+      corrected allocation also saves the total that caused a validation error. %>
   <% if @split.custom? %>
     <button type="button"
-            class="mt-6 w-full border-2 border-black px-4 py-3 font-medium
-                   disabled:border-black/25 disabled:text-black/25"
+            class="text-button mt-3"
             data-split-logic-target="spread"
             data-action="split-logic#spreadTheRest">
       Spread the rest evenly
     </button>
 
-    <%= form_with model: @split, id: "split_amounts" do |form| %>
-      <%= form.submit "Save amounts",
-                      data: { split_logic_target: "save" },
-                      class: "mt-2 w-full border-2 border-black bg-black px-4 py-3 " \
-                             "font-medium text-white disabled:border-black/25 " \
-                             "disabled:bg-white disabled:text-black/40" %>
-    <% end %>
+    <%= submit_tag(@split.remaining_cents.negative? ? "#{money(-@split.remaining_cents)} over the bill" : "Save amounts",
+                   form: "split_amounts", disabled: @split.remaining_cents.negative?,
+                   data: { split_logic_target: "save" }, class: "secondary-button mt-2") %>
   <% end %>
 
   <%= button_to "Add a person", split_participants_path(@split),
                 disabled: @split.participants.size >= SplitMath::PEOPLE_RANGE.max,
-                class: "mt-6 w-full border-2 border-black px-4 py-3 font-medium " \
-                       "disabled:border-black/25 disabled:text-black/25" %>
+                class: "add-person", data: { split_logic_target: "add" } %>
 </section>
 
 <%= link_to "Share and request money", split_path(@split),
-            class: "mt-10 block border-2 border-black bg-black px-4 py-3 text-center " \
-                   "font-medium text-white" %>
+            class: "primary-button mt-6" %>

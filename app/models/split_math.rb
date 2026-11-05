@@ -11,7 +11,7 @@
 # is the one thing the spec says must never happen.
 class SplitMath
   # Rule 6: limits.
-  PEOPLE_RANGE = (2..20).freeze
+  PEOPLE_RANGE = (1..20).freeze
   MAXIMUM_TOTAL_CENTS = 9_999_999 # $99,999.99
 
   class << self

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_05_060748) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_05_090000) do
   create_table "participants", force: :cascade do |t|
     t.integer "split_id", null: false
     t.integer "person_id"
@@ -20,6 +20,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_05_060748) do
     t.datetime "paid_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "payment_method"
     t.index ["person_id"], name: "index_participants_on_person_id"
     t.index ["split_id", "position"], name: "index_participants_on_split_id_and_position", unique: true
     t.check_constraint "amount_cents >= 0", name: "participants_amount_cents_not_negative"

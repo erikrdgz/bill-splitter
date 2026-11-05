@@ -85,22 +85,22 @@ class SplitTest < ActiveSupport::TestCase
 
   # Rule 6: limits.
 
-  test "a split is invalid with fewer than two people" do
-    split = build_even_split(people_count: 1)
+  test "a split is invalid without people" do
+    split = build_even_split(people_count: 0)
 
     assert_not split.valid?
-    assert_includes split.errors[:participants], "must be between 2 and 20 people"
+    assert_includes split.errors[:participants], "must be between 1 and 20 people"
   end
 
   test "a split is invalid with more than twenty people" do
     split = build_even_split(people_count: 21)
 
     assert_not split.valid?
-    assert_includes split.errors[:participants], "must be between 2 and 20 people"
+    assert_includes split.errors[:participants], "must be between 1 and 20 people"
   end
 
   test "a split is valid at both ends of the people range" do
-    assert build_even_split(people_count: 2).valid?
+    assert build_even_split(people_count: 1).valid?
     assert build_even_split(people_count: 20).valid?
   end
 

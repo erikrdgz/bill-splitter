@@ -1,0 +1,19 @@
+<section id="recent_friends" class="recent-section" aria-label="Recent friends">
+  <h2>Recent friends</h2>
+  <% if people.any? %>
+    <div class="friend-list">
+      <% people.each do |person| %>
+        <% connected = split.participants.any? { |participant| participant.person_id == person.id } %>
+        <%= button_to split_participants_path(split), params: { person_id: person.id },
+          class: "friend-choice #{'is-connected' if connected}", disabled: connected,
+          aria: { label: connected ? "#{person.name} is connected" : "Connect #{person.name}" }, title: person.name do %>
+          <%= render "shared/avatar", name: person.name %>
+          <span class="friend-name"><%= person.name %></span>
+          <% if connected %><span class="friend-state">Connected</span><% end %>
+        <% end %>
+      <% end %>
+    </div>
+  <% else %>
+    <p class="helper">Tap a person below to connect a name. They’ll be saved here for next time.</p>
+  <% end %>
+</section>

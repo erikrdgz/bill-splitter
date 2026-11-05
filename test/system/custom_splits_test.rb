@@ -105,13 +105,13 @@ class CustomSplitsTest < ApplicationSystemTestCase
 
     move_slider "Person 1", 10_000
 
-    assert_row_amounts [ "$33.34", "$33.33", "$33.33" ]
+    assert_row_amounts [ "$33.00", "$33.33", "$33.33" ]
 
     move_slider "Person 2", 0
     move_slider "Person 1", 10_000
 
-    assert_row_amounts [ "$66.67", "$0.00", "$33.33" ]
-    assert_text "You pay\n$0.00"
+    assert_row_amounts [ "$66.00", "$0.00", "$33.33" ]
+    assert_text "You pay\n$0.67"
   end
 
   # The organizer's own worked example: ask $20 of one person and $30 of another
@@ -170,7 +170,7 @@ class CustomSplitsTest < ApplicationSystemTestCase
     slider_for("Person 2").send_keys(:end)
 
     # End takes it to everything nobody else is holding.
-    assert_row_amounts [ "$0.00", "$66.67", "$33.33" ]
+    assert_row_amounts [ "$0.00", "$66.00", "$33.33" ]
   end
 
   # The bug: saving from halfway down the page used to throw you back to the top.
@@ -208,13 +208,30 @@ class CustomSplitsTest < ApplicationSystemTestCase
     assert_row_amounts [ "$33.34", "$33.33", "$33.33" ]
   end
 
+  test "lowering the bill preserves shares, reports the excess, and saves a correction" do
+    open_custom_editor_for "100", 2
+    enter_bill_amount("10", label: "Total bill")
+    click_on "Save name and total"
+    assert_text "Over the bill by"
+    assert_row_amounts [ "$50.00", "$50.00" ]
+    assert_button "$90.00 over the bill", disabled: true
+
+    move_slider "Person 1", 0
+    move_slider "Person 2", 1000
+    assert_button "Save amounts", disabled: false
+    click_on "Save amounts"
+    assert_text "Saved."
+    assert_field "Total bill", with: "10.00"
+    assert_row_amounts [ "$0.00", "$10.00" ]
+  end
+
   private
 
   def open_editor_for(amount, people_count)
     visit root_path
-    fill_in "Amount", with: amount
-    fill_in "People", with: people_count
-    click_on "Save and add names"
+    enter_bill_amount(amount)
+    set_people_count(people_count)
+    click_on "Save split"
     assert_selector "h1", text: "Edit split"
   end
 

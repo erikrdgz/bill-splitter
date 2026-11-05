@@ -2,7 +2,7 @@
 
 <h1 class="text-2xl font-semibold tracking-tight"><%= @split.title %></h1>
 
-<p class="mt-2 flex items-baseline justify-between text-lg">
+<p class="summary-total">
   <span>Total bill</span>
   <span class="font-medium tabular-nums"><%= money(@split.total_cents) %></span>
 </p>
@@ -20,6 +20,6 @@
   <%= render "shares/owed", split: @split %>
 </section>
 
-<p class="mt-8 text-sm text-black/60">
+<p class="mt-8 text-sm text-muted">
   Find your row, settle up, and tap "I paid". No account needed.
 </p>

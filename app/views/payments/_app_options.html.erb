@@ -13,18 +13,18 @@
       <%= link_to link.url,
                   target: "_blank",
                   rel: "noopener noreferrer",
-                  class: "border-2 border-black px-3 py-1 text-sm font-medium" do %>
+                  class: "border-2 border-line px-3 py-1 text-sm font-medium" do %>
         <%= link.name %> &rarr;
       <% end %>
     <% else %>
-      <details class="border-2 border-dashed border-black/40">
+      <details class="border-2 border-dashed border-line">
         <summary class="cursor-pointer px-3 py-1 text-sm">
-          <%= link.name %> <span class="text-black/50">(demo)</span>
+          <%= link.name %> <span class="text-muted">(demo)</span>
         </summary>
-        <div class="border-t border-black/20 px-3 py-2 text-sm">
+        <div class="border-t border-line px-3 py-2 text-sm">
           <p class="font-medium"><%= link.summary %></p>
-          <p class="mt-1 text-black/70"><%= link.why_demonstrated %></p>
-          <p class="mt-1 text-black/70">Nothing has been sent.</p>
+          <p class="mt-1 text-muted"><%= link.why_demonstrated %></p>
+          <p class="mt-1 text-muted">Nothing has been sent.</p>
         </div>
       </details>
     <% end %>

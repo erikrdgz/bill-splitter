@@ -25,13 +25,30 @@ import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {
   static targets = [
     "row", "slider", "lock", "amount", "percentage",
-    "remaining", "remainingLabel", "save", "spread"
+    "remaining", "remainingLabel", "save", "spread", "add"
   ]
 
   static values = { totalCents: Number }
 
   connect() {
     if (this.hasSliderTarget) this.#render()
+  }
+
+  rowTargetConnected() { this.#refreshCountControls() }
+  rowTargetDisconnected() { this.#refreshCountControls() }
+  #refreshCountControls() {
+    // Appending a custom row preserves existing unsaved inputs. Refresh only
+    // controls whose availability depends on the new number of cards.
+    this.rowTargets.forEach(row => {
+      row.querySelector("[data-swipe-logic-target=delete]").disabled = this.rowTargets.length <= 1
+    })
+    if (this.hasAddTarget) this.addTarget.disabled = this.rowTargets.length >= 20
+  }
+
+  // Turbo morphs this controller in place after a rejected total change, so
+  // connect() does not run again. Recompute the disabled state from the new bill.
+  totalCentsValueChanged() {
+    if (this.hasSliderTarget && this.hasRemainingTarget) this.#render()
   }
 
   // Touching a row locks it: the organizer has said what this person pays, so
@@ -49,10 +66,35 @@ export default class extends Controller {
     )
     const available = Math.max(this.totalCentsValue - heldByOthers, 0)
 
-    if (Number(slider.value) > available) slider.value = available
+    slider.value = Math.min(Math.round(Number(slider.value) / 100) * 100, Math.floor(available / 100) * 100)
 
     this.lockTargets[index].checked = true
 
+    this.#render()
+  }
+
+  stepShare(event) {
+    if (!["ArrowLeft", "ArrowDown", "ArrowRight", "ArrowUp"].includes(event.key)) return
+    event.preventDefault()
+    const direction = ["ArrowLeft", "ArrowDown"].includes(event.key) ? -1 : 1
+    event.target.value = (Math.round(Number(event.target.value) / 100) + direction) * 100
+    this.drag(event)
+  }
+
+  prepareAmount(event) {
+    const row = event.target.closest("[data-split-logic-target=row]")
+    const index = this.rowTargets.indexOf(row)
+    const field = event.target.querySelector("[data-amount-keypad-logic-target=field]")
+    field.value = Number(this.sliderTargets[index].value) / 100
+    field.dataset.personName = row.querySelector("[data-person-name]").textContent.trim()
+    const others = this.sliderTargets.reduce((sum, slider, position) => sum + (position === index ? 0 : Number(slider.value)), 0)
+    field.dataset.maxCents = Math.max(0, this.totalCentsValue - others)
+  }
+
+  setAmount(event) {
+    const index = this.rowTargets.indexOf(event.target.closest("[data-split-logic-target=row]"))
+    this.sliderTargets[index].value = event.detail.cents
+    this.lockTargets[index].checked = true
     this.#render()
   }
 
@@ -116,6 +158,7 @@ export default class extends Controller {
     // the total underneath amounts already set can, and the server refuses it,
     // so the screen says so rather than offering a button that will fail.
     const overshot = remainingCents < 0
+    this.remainingTarget.closest("#remaining").dataset.over = String(overshot)
 
     if (this.hasRemainingTarget) {
       this.remainingTarget.textContent = this.#formattedDollars(Math.abs(remainingCents))

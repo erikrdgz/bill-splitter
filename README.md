@@ -69,7 +69,7 @@ bin/rails test:system
 
 | Screen | Route | How it works |
 | --- | --- | --- |
-| Quick split | `GET /` | No database at all. `QuickSplitLogic` mirrors `SplitMath` so shares move on every keystroke. |
+| Quick split | `GET /` | Reads recent friends; writes only on Save split or Review requests. `QuickSplitLogic` previews even/custom shares before any save; Add grows the group and swiping removes a row. |
 | Split editor | `GET /splits/:id/edit` | Rename, change the total, add, name and remove people. Even and Custom modes. |
 | People picker | `GET /people?participant_id=…` | Search-as-you-type in a Turbo Frame; Stimulus only debounces. |
 | Share page | `GET /s/:share_token` | Public. A friend sees what they owe and taps "I paid". No account. |
@@ -109,5 +109,15 @@ Every handle ends up inside a URL, so it is format-checked on the way in by the
 ## Not done yet
 
 - Deploying to Render or Fly.io (step 9 of the build order).
-- The visual design pass (step 10). The UI is deliberately plain black and white, with styling
-  in Tailwind classes that are easy to replace.
+- Review the local visual design pass (step 10): graphite surfaces, separate live-total and named-person keypads, whole-dollar draft sliders, swipe deletion, initial avatars, and per-person payment choices.
+
+For a fuller local contact preview, run `CONTACT_ID=<existing local contact ID> bin/rails dev:contacts`.
+It adds eight sample names to that contact's browser-owned list, without payment handles or
+new splits. The task refuses to run outside development. Connect searches saved app contacts;
+it does not read a phone's address book.
+
+For previews across browsers, `bin/rails dev:contacts:enable` opts this development server into
+adding sample contacts to each empty browser-owned list on its next page load. Existing lists
+are untouched, and contacts remain private to each browser. `bin/rails dev:contacts:disable`
+turns off automatic sample creation. The opt-in flag lives in ignored `tmp/contact-preview.txt`;
+it cannot enable samples in production.

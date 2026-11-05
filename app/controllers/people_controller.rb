@@ -16,6 +16,15 @@ class PeopleController < ApplicationController
     @people = matching_people
   end
 
+  # Read-only, browser-owned contacts for an unsaved draft. Blank input shows
+  # no suggestions; a name is never saved merely because it was searched.
+  def search
+    query = params[:query].to_s.strip.first(40)
+    people = query.present? ? Person.owned_by(owner_token).matching(query).by_name.limit(20) : []
+    render json: people.map { |person| { id: person.id, name: person.name,
+      venmo: person.venmo_handle, cashApp: person.cashapp_cashtag, zelle: person.zelle_contact } }
+  end
+
   # "Add [name] as a new person": saves the name for next time and puts it on
   # this row, in one request, because that is one decision for the organizer.
   def create
@@ -23,8 +32,13 @@ class PeopleController < ApplicationController
 
     if @person.save
       @participant.update!(person: @person)
-      render partial: "participants/participant_name",
-             locals: { participant: @participant, split: @split }
+      render turbo_stream: [
+        turbo_stream.replace(ActionView::RecordIdentifier.dom_id(@participant, :name),
+                             partial: "participants/participant_name",
+                             locals: { participant: @participant, split: @split }),
+        turbo_stream.replace("recent_friends", partial: "splits/recent_friends",
+                             locals: { split: @split, people: Person.owned_by(owner_token).recently_used.limit(12) })
+      ]
     else
       @query = @person.name.to_s
       @people = matching_people

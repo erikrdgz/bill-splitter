@@ -1,11 +1,23 @@
-<%# One person's share on the quick split screen. Rendered by the server for the
-    rows that exist when the page loads, and cloned by QuickSplitLogic from the
-    <template> below it for the rows the stepper adds. Either way the markup
-    lives here, in ERB, and not in JavaScript.
-
-    The em dash is the "no amount yet" state. tabular-nums keeps the figures the
-    same width so the column does not jitter while the organizer types. %>
-<li class="flex items-baseline justify-between gap-4 border-t border-black/20 py-3">
-  <span data-share-row-name><%= "Person #{position}" %></span>
-  <span class="font-medium tabular-nums" data-share-row-amount>&mdash;</span>
+<li class="draft-card swipe-card" tabindex="0" data-controller="swipe-logic" data-action="pointerdown->swipe-logic#start pointermove->swipe-logic#move pointerup->swipe-logic#finish pointercancel->swipe-logic#cancel keydown->swipe-logic#key click->swipe-logic#click:capture">
+  <button type="button" class="swipe-delete" hidden data-swipe-logic-target="delete" data-action="quick-split-logic#remove" aria-label="Remove Person <%= position %>"><%= render "shared/delete_icon" %></button>
+  <div class="draft-card-surface" data-swipe-logic-target="surface">
+  <div class="draft-card-heading">
+    <button type="button" class="draft-connect" data-action="quick-split-logic#openConnection">
+      <span class="avatar avatar--small avatar--placeholder" data-share-row-avatar aria-hidden="true"><%= position %></span>
+      <span><span data-share-row-name><%= "Person #{position}" %></span><span class="row-connect-label" data-share-row-connection>Connect +</span></span>
+    </button>
+    <div data-controller="amount-keypad-logic" data-amount-keypad-logic-person-value="true" data-action="amount-keypad-logic:apply->quick-split-logic#setAmount">
+      <input type="hidden" data-amount-keypad-logic-target="field" data-share-amount-field>
+      <button type="button" class="preview-amount amount-trigger" data-share-row-amount data-action="amount-keypad-logic#open" aria-haspopup="dialog">—</button>
+      <%= render "shared/amount_keypad", person: true %>
+    </div>
+  </div>
+  <div class="draft-slider">
+    <input type="range" min="0" max="100" value="0" step="1" aria-label="Person <%= position %>'s share" data-share-row-slider data-action="input->quick-split-logic#drag keydown->quick-split-logic#stepShare">
+    <label class="percent-control"><input type="text" inputmode="decimal" value="0" aria-label="Person <%= position %>'s percentage" data-share-row-percent data-action="change->quick-split-logic#setPercentage"><span>%</span></label>
+  </div>
+  <% %w[person_id name payment_method handle amount_cents locked].each do |field| %>
+    <input type="hidden" name="split[draft_rows][][<%= field %>]" data-draft-field="<%= field %>" value="">
+  <% end %>
+  </div>
 </li>

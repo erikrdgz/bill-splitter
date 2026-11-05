@@ -29,8 +29,8 @@ class PeopleControllerTest < ActionDispatch::IntegrationTest
 
     assert_select "turbo-frame#people_results" do
       assert_select "li", 2
-      assert_select "input[type=submit][value=?]", "Marissa"
-      assert_select "input[type=submit][value=?]", "Marcus"
+      assert_select "button[aria-label=?]", "Marissa"
+      assert_select "button[aria-label=?]", "Marcus"
     end
   end
 
@@ -63,6 +63,32 @@ class PeopleControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame#people_results", text: /No saved name matches/
   end
 
+  test "draft contact search matches owned contacts without writing" do
+    split = create_split
+    person = save_people(split, "Maya Chen", "Jordan Lee").first
+    person.update!(venmo_handle: "maya-preview")
+    assert_no_difference [ -> { Person.count }, -> { Split.count } ] do
+      get search_people_url, params: { query: "MAYA" }, as: :json
+    end
+    assert_response :success
+    assert_equal [ "Maya Chen" ], response.parsed_body.map { |contact| contact["name"] }
+    assert_equal "maya-preview", response.parsed_body.first["venmo"]
+  end
+
+  test "draft contact search never returns another browser's contacts" do
+    create_split
+    get search_people_url, params: { query: people(:marissa).name }, as: :json
+    assert_response :success
+    assert_equal [], response.parsed_body
+  end
+
+  test "blank draft contact search has no unsolicited suggestions" do
+    split = create_split
+    save_people(split, "Alex Rivera")
+    get search_people_url, params: { query: " " }, as: :json
+    assert_equal [], response.parsed_body
+  end
+
   # Adding a new name.
 
   test "adding a new name saves it and puts it on the row in one request" do
@@ -86,7 +112,7 @@ class PeopleControllerTest < ActionDispatch::IntegrationTest
 
     get people_url(participant_id: split.participants.second.id, query: "zo")
 
-    assert_select "input[type=submit][value=?]", "Zoe"
+    assert_select "button[aria-label=?]", "Zoe"
   end
 
   test "a duplicate name is refused and the picker stays open" do

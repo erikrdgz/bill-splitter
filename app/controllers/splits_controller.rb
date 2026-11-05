@@ -1,5 +1,6 @@
 class SplitsController < ApplicationController
   before_action :set_quick_split_limits, only: %i[new create]
+  before_action :set_recent_people, only: %i[new create edit update]
   before_action :set_split, only: %i[show edit update]
 
   # History: this browser's splits, newest first.
@@ -11,10 +12,8 @@ class SplitsController < ApplicationController
     @splits = Split.owned_by(owner_token).newest_first.includes(:participants)
   end
 
-  # The quick split screen. It touches no database: the organizer has not asked
-  # us to remember anything yet, so there is nothing to save and nothing to look
-  # up. The shares on screen are worked out in the browser by QuickSplitLogic,
-  # which mirrors SplitMath so the numbers move with every keystroke.
+  # The draft reads this browser's recent people, but writes nothing until
+  # Save or Review. QuickSplitLogic previews shares; the server recomputes on create.
   def new
     @split = Split.new
     @people_count = @minimum_people
@@ -26,17 +25,25 @@ class SplitsController < ApplicationController
   # server's arithmetic and not the browser's.
   def create
     @split = Split.new(
-      title: default_title,
+      title: quick_split_params[:title].presence || default_title,
       amount: quick_split_params[:amount],
       owner_token: owner_token
     )
-    build_participants(submitted_people_count)
-    @split.apply_even_split
-
-    if @split.save
-      redirect_to edit_split_path(@split)
+    rows = quick_split_params[:draft_rows]
+    if rows.present?
+      @draft_rows = rows.map(&:to_h)
+      saved = SplitDraft.new(@split, rows).save
     else
-      @people_count = submitted_people_count
+      build_participants(submitted_people_count)
+      selected_people.each_with_index { |person, index| @split.participants[index].person = person }
+      @split.apply_even_split
+      saved = @split.save
+    end
+
+    if saved
+      redirect_to params[:intent] == "request" ? split_path(@split) : edit_split_path(@split)
+    else
+      @people_count = rows.present? ? rows.size : submitted_people_count
       render :new, status: :unprocessable_entity
     end
   end
@@ -76,14 +83,26 @@ class SplitsController < ApplicationController
     @split = Split.owned_by(owner_token).find(params[:id])
   end
 
+  def set_recent_people
+    DevelopmentContacts.seed_for(owner_token)
+    @recent_people = Person.owned_by(owner_token).recently_used.limit(12)
+  end
+
+  def selected_people
+    @selected_people ||= Array(quick_split_params[:person_ids]).reject(&:blank?).uniq.first(SplitMath::PEOPLE_RANGE.max).map do |id|
+      Person.owned_by(owner_token).find(id)
+    end
+  end
+
   def set_quick_split_limits
-    @minimum_people = SplitMath::PEOPLE_RANGE.min
+    @minimum_people = 0
     @maximum_people = SplitMath::PEOPLE_RANGE.max
     @maximum_total_cents = SplitMath::MAXIMUM_TOTAL_CENTS
   end
 
   def quick_split_params
-    params.expect(split: %i[amount people_count])
+    params.expect(split: [ :amount, :people_count, :title, { person_ids: [],
+      draft_rows: [ [ :person_id, :name, :payment_method, :handle, :amount_cents, :locked ] ] } ])
   end
 
   def split_params
@@ -100,15 +119,13 @@ class SplitsController < ApplicationController
   end
 
   def submitted_people_count
-    quick_split_params[:people_count].to_i
+    [ quick_split_params[:people_count].to_i, selected_people.size ].max
   end
 
-  # Clamped only at the ends that would hurt: below 1 the even split has nobody
-  # to divide between, and far above the maximum a forged request could ask us
-  # to build a million rows. One over the maximum still fails validation with
-  # the message the organizer should see.
+  # Keep an empty submission empty so validation refuses it. A forged request
+  # can build at most one row above the limit, enough for a useful error.
   def build_participants(people_count)
-    safe_count = people_count.clamp(1, SplitMath::PEOPLE_RANGE.max + 1)
+    safe_count = people_count.clamp(0, SplitMath::PEOPLE_RANGE.max + 1)
 
     safe_count.times { |index| @split.participants.build(position: index + 1) }
   end

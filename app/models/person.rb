@@ -15,6 +15,12 @@ class Person < ApplicationRecord
   validates :owner_token, presence: true
 
   scope :owned_by, ->(owner_token) { where(owner_token: owner_token) }
+  # Most recently connected first, including people not used in a split yet.
+  scope :recently_used, -> {
+    left_joins(:participants).group(:id)
+      .order(Arel.sql("COALESCE(MAX(participants.updated_at), people.created_at) DESC, people.id DESC"))
+  }
+
   scope :by_name, -> { order(:name) }
 
   # Search-as-you-type for the people picker. A class method rather than a scope

@@ -1,0 +1,23 @@
+<% person = local_assigns.fetch(:person, false) %>
+<dialog class="amount-sheet <%= person ? "amount-sheet--person" : "amount-sheet--total" %>" data-amount-keypad-logic-target="dialog" data-action="keydown->amount-keypad-logic#key cancel->amount-keypad-logic#cancel" aria-label="Enter bill amount" tabindex="-1" data-sheet-focus>
+  <div class="sheet-content">
+  <output class="keypad-display" aria-live="polite" data-amount-keypad-logic-target="display">$0</output>
+  <div class="keypad-panel">
+  <% if person %><p class="keypad-context" data-amount-keypad-logic-target="context"></p><% end %>
+  <div class="keypad-top">
+    <button type="button" data-action="amount-keypad-logic#clear">Clear</button>
+    <button type="button" aria-label="Cancel amount" data-action="amount-keypad-logic#close">×</button>
+  </div>
+  <div class="amount-keypad">
+    <% (1..9).each do |digit| %>
+      <button type="button" data-key="<%= digit %>" data-action="amount-keypad-logic#press"><%= digit %></button>
+    <% end %>
+    <button type="button" aria-label="Decimal point" data-key="." data-action="amount-keypad-logic#press">.</button>
+    <button type="button" data-key="0" data-action="amount-keypad-logic#press">0</button>
+    <button type="button" aria-label="Backspace" data-action="amount-keypad-logic#erase">⌫</button>
+  </div>
+  <p class="form-error" role="alert" data-amount-keypad-logic-target="error" hidden></p>
+  <button type="button" class="primary-button mt-5" data-action="amount-keypad-logic#apply">Set amount</button>
+  </div>
+  </div>
+</dialog>

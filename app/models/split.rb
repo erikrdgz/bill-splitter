@@ -49,6 +49,8 @@ class Split < ApplicationRecord
   # Rule 2 applied to this split: every row gets an even share and no row is
   # locked. Assigns only — the caller saves.
   def apply_even_split
+    return if participants.empty?
+
     shares = SplitMath.even_shares(total_cents: total_cents.to_i, people_count: participants.size)
 
     participants.each_with_index do |participant, index|

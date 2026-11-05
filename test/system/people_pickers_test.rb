@@ -88,27 +88,63 @@ class PeoplePickersTest < ApplicationSystemTestCase
   test "removing a person respreads the money" do
     open_editor_for "90", 3
 
-    accept_confirm { click_on "Remove Person 3" }
+    find("ol#participants > li", text: "Person 3").send_keys(:delete)
 
     assert_selector "ol#participants > li", count: 2
 
     assert_row_amounts [ "$45.00", "$45.00" ]
   end
 
-  test "the last two people cannot be removed" do
-    open_editor_for "90", 2
+  test "the last saved person cannot be removed" do
+    open_editor_for "90", 1
 
-    assert_button "Remove Person 1", disabled: true
-    assert_button "Remove Person 2", disabled: true
+    assert_selector "button[aria-label='Remove Person 1'][disabled]", visible: :all
+  end
+
+  test "a recent friend can be selected before connecting a new split" do
+    open_editor_for "100", 2
+    save_name_on_row "Name Person 1", "Alex Rivera"
+    within "#recent_friends" do
+      assert_button "Alex Rivera is connected", disabled: true
+    end
+    click_on "New split"
+    2.times { click_on "Add", exact: true }
+    click_on "Add Alex Rivera"
+    enter_bill_amount("90")
+    fill_in "What's this for?", with: "Dinner"
+    assert_selector "[data-share-row-name]", text: "Alex Rivera"
+    click_on "Save split"
+    assert_link "Name Alex Rivera"
+    assert_field "What was it for?", with: "Dinner"
+    assert_row_amounts [ "$30.00", "$30.00", "$30.00" ]
+  end
+
+  test "recent quick add appends a seat and preserves unsaved custom amounts" do
+    open_editor_for "100", 2
+    save_name_on_row "Name Person 1", "Alex Rivera"
+    click_on "New split"
+    enter_bill_amount("60")
+    set_people_count(2)
+    click_on "Save split"
+    click_on "Custom"
+    find("input[type=range]", match: :first).send_keys(:home)
+    assert_row_amounts [ "$0.00", "$30.00" ]
+    within "#recent_friends" do
+      click_on "Connect Alex Rivera"
+    end
+    assert_link "Name Alex Rivera"
+    assert_link "Name Person 1"
+    assert_link "Name Person 2"
+    assert_row_amounts [ "$0.00", "$30.00", "$0.00" ]
   end
 
   private
 
   def open_editor_for(amount, people_count)
     visit root_path
-    fill_in "Amount", with: amount
-    fill_in "People", with: people_count
-    click_on "Save and add names"
+    enter_bill_amount(amount)
+    set_people_count(people_count)
+    click_on "Save split"
     assert_selector "h1", text: "Edit split"
   end
 

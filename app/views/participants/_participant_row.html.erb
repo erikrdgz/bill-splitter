@@ -12,63 +12,60 @@
 <% field_name = ->(attribute) { "split[participants_attributes][#{participant_counter}][#{attribute}]" } %>
 
 <li id="<%= dom_id(participant) %>"
-    class="border-t border-black/20 py-3"
+    class="participant-card swipe-card" tabindex="0"
+    aria-label="<%= participant.display_name %>. Swipe left or press Delete to remove."
+    data-controller="swipe-logic" data-action="pointerdown->swipe-logic#start pointermove->swipe-logic#move pointerup->swipe-logic#finish pointercancel->swipe-logic#cancel keydown->swipe-logic#key click->swipe-logic#click:capture"
     data-split-logic-target="row">
 
-  <div class="flex items-baseline justify-between gap-3">
+  <%= button_to split_participant_path(split, participant), method: :delete,
+                disabled: !removable, hidden: true, class: "swipe-delete",
+                data: { swipe_logic_target: "delete" }, aria: { label: "Remove #{participant.display_name}" } do %>
+    <%= render "shared/delete_icon" %>
+  <% end %>
+  <div class="participant-card-surface" data-swipe-logic-target="surface">
+  <div class="participant-top">
     <%= render "participants/participant_name", participant: participant, split: split %>
 
-    <span class="flex shrink-0 items-baseline gap-3">
-      <span class="text-sm tabular-nums text-black/60" data-split-logic-target="percentage">
+    <span class="participant-figures">
+      <span class="text-sm tabular-nums text-muted" data-split-logic-target="percentage">
         <%= number_with_precision(participant.percentage, precision: 1) %>%
       </span>
-      <span class="w-20 text-right font-medium tabular-nums"
-            data-split-logic-target="amount"
-            data-row-amount>
-        <%= money(participant.amount_cents) %>
-      </span>
-
-      <%# Disabled rather than hidden at the minimum, so the control does not move
-          around as rows come and go. The controller refuses it too. %>
-      <%= button_to split_participant_path(split, participant),
-                    method: :delete,
-                    disabled: !removable,
-                    class: "size-8 border border-black/40 text-sm leading-none " \
-                           "disabled:border-black/15 disabled:text-black/25",
-                    aria: { label: "Remove #{participant.display_name}" },
-                    form: { data: { turbo_confirm: "Remove #{participant.display_name}?" } } do %>
-      &times;
+      <% if split.custom? %>
+        <span data-controller="amount-keypad-logic" data-amount-keypad-logic-person-value="true"
+          data-action="amount-keypad-logic:prepare->split-logic#prepareAmount amount-keypad-logic:apply->split-logic#setAmount">
+          <input type="hidden" data-amount-keypad-logic-target="field">
+          <button type="button" class="w-20 text-right font-medium tabular-nums amount-trigger"
+            aria-label="Edit <%= participant.display_name %>'s amount" aria-haspopup="dialog"
+            data-split-logic-target="amount" data-row-amount data-action="amount-keypad-logic#open"><%= money(participant.amount_cents) %></button>
+          <%= render "shared/amount_keypad", person: true %>
+        </span>
+      <% else %>
+        <span class="w-20 text-right font-medium tabular-nums" data-split-logic-target="amount" data-row-amount><%= money(participant.amount_cents) %></span>
       <% end %>
+
     </span>
   </div>
 
   <% if split.custom? %>
-    <div class="mt-2 flex items-center gap-3">
+    <div class="slider-controls">
       <%= hidden_field_tag field_name.call(:id), participant.id,
                            id: nil, form: "split_amounts" %>
 
-      <%# The max is the whole bill, fixed, and never recomputed.
-
-          It matters that it does not move: a range input draws its thumb at
-          value / max, so changing one row's max slides its thumb even when the
-          amount behind it has not changed a cent. Capping each row at "the
-          total minus everyone else" did exactly that, and made every slider
-          look like it was following the one being dragged.
-
-          Nothing is lost by allowing more than the bill: the remaining figure
-          goes negative, says so, and the split cannot be saved until it
-          balances. %>
+      <%# Normal sliders span the whole bill. An invalid lowered bill must also
+          accommodate the existing shares, or the browser silently clamps them
+          before the user can see and correct the true excess. All rows still
+          use the same fixed range; dragging never changes another row's max. %>
       <input type="range"
              name="<%= field_name.call(:amount_cents) %>"
              form="split_amounts"
              min="0"
-             max="<%= split.total_cents %>"
+             max="<%= [ split.total_cents.to_i, split.participants.map(&:amount_cents).max.to_i ].max %>"
              step="1"
              value="<%= participant.amount_cents %>"
-             class="w-full accent-black"
+             class="w-full accent-accent"
              aria-label="<%= participant.display_name %>'s share"
              data-split-logic-target="slider"
-             data-action="input->split-logic#drag">
+             data-action="input->split-logic#drag keydown->split-logic#stepShare">
 
       <%# The hidden field is how an unchecked box still sends a value. It needs
           the form attribute too, or it would belong to the remove button's form. %>
@@ -78,7 +75,7 @@
                name="<%= field_name.call(:locked) %>"
                form="split_amounts"
                value="1"
-               class="accent-black"
+               class="accent-accent"
                <%= "checked" if participant.locked? %>
                aria-label="Lock <%= participant.display_name %>"
                data-split-logic-target="lock"
@@ -87,4 +84,5 @@
       </label>
     </div>
   <% end %>
+  </div>
 </li>

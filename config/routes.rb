@@ -9,7 +9,9 @@ Rails.application.routes.draw do
 
   # index is the search behind the people picker; edit and update are where a
   # saved person gets the handle you can ask them for money at.
-  resources :people, only: %i[index create show edit update]
+  resources :people, only: %i[index create show edit update] do
+    get :search, on: :collection
+  end
 
   # The organizer's own handles, so friends can pay them. Singular: there is one
   # per browser.
