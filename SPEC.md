@@ -100,12 +100,20 @@ The server always has the final say.
    *Revised 2026-11-05. The original rule re-evened every unlocked row on each change, which
    undid allocations the organizer had already made: dropping one person of 20/30/50 to zero
    turned the other two into 50/50 instead of leaving them at 30 and 50.*
-4. **Slider limit.** A slider can't go above the total minus every other row, locked or not.
-   The amounts can therefore never come to more than the bill. They can come to less, and that
-   gap is the remaining amount, which has to reach zero before a custom split can be saved.
+4. **No slider limit.** Every slider runs the whole bill, from zero to the total, and its
+   range never changes while another row is being dragged. The amounts are free to come to
+   less than the bill (the organizer is covering the rest themselves) or more (they have
+   overshot).
 
-   *Revised 2026-11-05 alongside rule 3: when untouched rows keep their amounts, they are
-   holding cents too, so the limit has to count them.*
+   What keeps the total honest is the remaining amount, not a cap: it reads "Left to give"
+   when the rows come to less than the bill and "Over by" when they come to more, and a split
+   that does not add up cannot be saved.
+
+   *Revised twice on 2026-11-05. The first attempt capped each row at the total minus every
+   other row. That is arithmetically sound and visually wrong: a range input draws its thumb
+   at value ÷ max, so changing one row's maximum slid its thumb without changing a cent behind
+   it — every slider appeared to follow the one being dragged. Reducing one person's share
+   should move nothing but that share and the remaining figure.*
 5. **Percentages are display only.** They're worked out from cents and shown to one decimal.
    Cents are the source of truth.
 6. **Limits.** 2 to 20 people. The total is at least 1 cent per person and at most $99,999.99.

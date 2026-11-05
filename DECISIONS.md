@@ -717,3 +717,46 @@ element references on perfectly good pages.
 `Capybara.default_max_wait_time = 5` is a maximum, not a pause: a test that passes immediately
 still passes immediately. `assert_eventually` does the same job for values read out of
 JavaScript, which Capybara's matchers cannot retry for us.
+
+## Custom split, revised again — the sliders had no business being capped
+
+### The bug
+
+Reported as "the sliders still are moving together". With two people at 50/50, reducing person
+A appeared to move person B's slider as well.
+
+Person B's **amount** was never touched. Person B's **max** was: it had been capped at "the
+total minus every other row", so dropping A from $50 to $30 raised B's max from 10000 to 7000
+— and a range input draws its thumb at value ÷ max. B still owed exactly $50, and its thumb
+slid from halfway along the track to five sevenths of the way along. Every slider looked
+chained to the one being dragged.
+
+### What it does now
+
+Every slider runs 0 to the total, fixed, and nothing recomputes it. `#render` reads the
+sliders and writes only the amounts, the percentages and the remaining figure. It never writes
+a slider's value or its range — only "Spread the rest evenly" moves a slider the organizer did
+not touch, and only when they ask.
+
+So the amounts can now come to more than the bill. That is fine, and useful: the remaining
+line reads "Over by $40.00" instead of "Left to give", and the Save button says `$40.00 over`
+while staying shut. **The invariant was never the cap — it is the validation.** Capping the
+sliders was belt on top of braces, and the belt was visibly broken.
+
+`SplitMath.maximum_for_row` went with it. It had one caller, and rule 4 no longer exists in a
+form that needs it, so leaving the method around would have been a rule nobody applies.
+
+### The test proves itself
+
+`test "reducing one share moves nothing about the other slider"` asserts person B's `value`
+**and** its `max` are unchanged, because together those two are the thumb position. Restoring
+the old dynamic max makes it fail with `Expected: "10000", Actual: "7000"` — the exact bug,
+caught.
+
+### Still open
+
+The organizer said they often reduce someone's share because they are covering that part
+themselves. Today that leaves "Left to give" above zero and the split cannot be saved. Letting
+a split save with the organizer absorbing the difference would mean relaxing "participants add
+up to the total", which is the hardest rule in the spec — so it is a question for them, not an
+assumption to make here.

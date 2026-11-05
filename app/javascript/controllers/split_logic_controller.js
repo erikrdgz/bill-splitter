@@ -3,25 +3,26 @@ import { Controller } from "@hotwired/stimulus"
 // The custom-split sliders.
 //
 // Custom mode is hand allocation: dragging a row sets that row and nothing
-// else. Rows the organizer has not touched keep what they were last given,
-// because re-evening them would undo the decision just made — drop one person
-// to zero and the other two should stay where they are, with the freed money
-// showing up as "left to give".
+// else. No other slider's value moves, and — just as important — no other
+// slider's range moves either. A range input draws its thumb at value / max, so
+// changing another row's max slides its thumb without changing a cent behind
+// it, which looks exactly like the sliders are chained together.
 //
-// Rule 4 is what keeps this honest: a slider's maximum is the total minus
-// every other row, so the amounts can never add up to more than the bill. They
-// can add up to less, and that gap is the remaining figure the organizer works
-// down to zero before the Save button comes alive.
+// So every slider runs the whole bill, from zero to the total, fixed. The
+// amounts are free to come to less than the total (the organizer is covering
+// the rest themselves) or more (they have overshot). The remaining figure says
+// which, and the Save button stays shut until it reads zero — that is what
+// keeps the total honest, not a cap on the sliders.
 //
 // Nothing here saves. SplitsController checks the posted amounts and refuses a
-// split that does not add up, so the server still has the final say — it just
-// says "no" rather than quietly rewriting the allocation.
+// split that does not add up, so the server still has the final say.
 //
 // Everything is whole cents. The slider's own min, max, step and value are in
 // cents too, so the browser never rounds money on our behalf.
 export default class extends Controller {
   static targets = [
-    "row", "slider", "lock", "amount", "percentage", "remaining", "save", "spread"
+    "row", "slider", "lock", "amount", "percentage",
+    "remaining", "remainingLabel", "save", "spread"
   ]
 
   static values = { totalCents: Number }
@@ -79,39 +80,49 @@ export default class extends Controller {
     )
   }
 
+  // Reads every slider and redraws what depends on them. It never writes a
+  // slider's value or its range — only `spreadTheRest` moves a slider the
+  // organizer did not touch, and only when they ask for it.
   #render() {
     const amounts = this.sliderTargets.map((slider) => Number(slider.value))
     const claimedCents = amounts.reduce((sum, amount) => sum + amount, 0)
-    const remainingCents = this.totalCentsValue - claimedCents
 
-    this.sliderTargets.forEach((slider, index) => {
-      // Rule 4: this row may take everything no other row is holding.
-      slider.max = Math.max(this.totalCentsValue - (claimedCents - amounts[index]), 0)
-
+    this.sliderTargets.forEach((_slider, index) => {
       this.amountTargets[index].textContent = this.#formattedDollars(amounts[index])
       this.percentageTargets[index].textContent = `${this.#percentage(amounts[index])}%`
     })
 
-    this.#renderRemaining(remainingCents)
+    this.#renderRemaining(this.totalCentsValue - claimedCents)
   }
 
   #renderRemaining(remainingCents) {
+    const overshot = remainingCents < 0
+
     if (this.hasRemainingTarget) {
-      this.remainingTarget.textContent = this.#formattedDollars(remainingCents)
+      this.remainingTarget.textContent = this.#formattedDollars(Math.abs(remainingCents))
+    }
+
+    if (this.hasRemainingLabelTarget) {
+      this.remainingLabelTarget.textContent = overshot ? "Over by" : "Left to give"
     }
 
     // Saving a split that does not add up would only earn an error page, so the
-    // button says so before it is pressed.
+    // button says what is wrong before it is pressed.
     if (this.hasSaveTarget) {
       this.saveTarget.disabled = remainingCents !== 0
-      this.saveTarget.value = remainingCents === 0
-        ? "Save amounts"
-        : `${this.#formattedDollars(Math.abs(remainingCents))} left to give`
+      this.saveTarget.value = this.#saveLabel(remainingCents)
     }
 
     if (this.hasSpreadTarget) {
       this.spreadTarget.disabled = this.lockTargets.every((lock) => lock.checked)
     }
+  }
+
+  #saveLabel(remainingCents) {
+    if (remainingCents === 0) return "Save amounts"
+    if (remainingCents < 0) return `${this.#formattedDollars(-remainingCents)} over`
+
+    return `${this.#formattedDollars(remainingCents)} left to give`
   }
 
   // Rule 5: display only, one decimal, worked out from cents.

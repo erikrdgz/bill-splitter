@@ -67,22 +67,46 @@ class CustomSplitsTest < ApplicationSystemTestCase
     assert_row_percentages [ "0.0%", "50.0%", "33.3%" ]
   end
 
-  # Rule 4: the amounts can never come to more than the bill, so a row can only
-  # grow into what the others have left.
-  test "a share cannot be pushed past what the others leave" do
+  # The reported bug, in the smallest case that shows it: two people at 50/50.
+  # Person 2's amount never changed, but its slider's max did, and a range input
+  # draws its thumb at value / max — so the thumb slid and the sliders looked
+  # chained together.
+  test "reducing one share moves nothing about the other slider" do
+    open_custom_editor_for "100", 2
+
+    assert_equal "5000", slider_for("Person 2").value
+    untouched_max = slider_for("Person 2")[:max]
+
+    move_slider "Person 1", 3000
+
+    assert_row_amounts [ "$30.00", "$50.00" ]
+    assert_equal "5000", slider_for("Person 2").value
+    # Same value and same range means the thumb cannot have moved a pixel.
+    assert_equal untouched_max, slider_for("Person 2")[:max]
+    assert_text "Left to give\n$20.00"
+  end
+
+  test "every slider runs the whole bill, however the others are set" do
     open_custom_editor_for "100", 3
 
-    # Everything is already given out, so this row cannot grow at all.
-    move_slider "Person 1", 9_999_999
+    assert_equal [ "10000", "10000", "10000" ],
+                 [ "Person 1", "Person 2", "Person 3" ].map { |name| slider_for(name)[:max] }
 
-    assert_row_amounts [ "$33.34", "$33.33", "$33.33" ]
+    move_slider "Person 1", 0
 
-    # Free some up, and now it can.
-    move_slider "Person 2", 0
-    move_slider "Person 1", 9_999_999
+    assert_equal [ "10000", "10000", "10000" ],
+                 [ "Person 1", "Person 2", "Person 3" ].map { |name| slider_for(name)[:max] }
+  end
 
-    assert_row_amounts [ "$66.67", "$0.00", "$33.33" ]
-    assert_text "Left to give\n$0.00"
+  # Going over is allowed while you work; it just cannot be saved.
+  test "overshooting the bill says so rather than being blocked" do
+    open_custom_editor_for "100", 3
+
+    move_slider "Person 1", 10_000
+
+    assert_row_amounts [ "$100.00", "$33.33", "$33.33" ]
+    assert_text "Over by\n$66.66"
+    assert_button "$66.66 over", disabled: true
   end
 
   test "saving is refused until every share is given out" do
@@ -125,15 +149,15 @@ class CustomSplitsTest < ApplicationSystemTestCase
   test "the keyboard drives the sliders too" do
     open_custom_editor_for "100", 3
 
-    # Home takes a range input to its minimum.
+    # Home takes a range input to its minimum, End to its maximum.
     slider_for("Person 1").send_keys(:home)
 
     assert_row_amounts [ "$0.00", "$33.33", "$33.33" ]
+    assert_text "Left to give\n$33.34"
 
-    # End takes it to its maximum, which is whatever the others have left.
     slider_for("Person 2").send_keys(:end)
 
-    assert_row_amounts [ "$0.00", "$66.67", "$33.33" ]
+    assert_row_amounts [ "$0.00", "$100.00", "$33.33" ]
   end
 
   # The bug: saving from halfway down the page used to throw you back to the top.

@@ -122,30 +122,6 @@ class SplitMathTest < ActiveSupport::TestCase
     assert_raises(ArgumentError) { SplitMath.custom_shares(total_cents: 10_000, locked_amounts: []) }
   end
 
-  # Rule 4: slider limit.
-
-  test "a row cannot claim cents another row already holds" do
-    assert_equal 6000, SplitMath.maximum_for_row(total_cents: 10_000, other_amounts: [ 4000 ])
-  end
-
-  # Custom mode is hand allocation: an untouched row keeps what it was given
-  # rather than being re-evened, so it is holding cents too.
-  test "the maximum counts every other row, not only the locked ones" do
-    assert_equal 2000, SplitMath.maximum_for_row(total_cents: 10_000, other_amounts: [ 3000, 5000 ])
-  end
-
-  test "a row is capped at its own amount once the bill is fully given out" do
-    assert_equal 2000, SplitMath.maximum_for_row(total_cents: 10_000, other_amounts: [ 8000 ])
-  end
-
-  test "a row with no other rows holding anything may claim the whole total" do
-    assert_equal 10_000, SplitMath.maximum_for_row(total_cents: 10_000, other_amounts: [])
-  end
-
-  test "the maximum for a row is never negative" do
-    assert_equal 0, SplitMath.maximum_for_row(total_cents: 1000, other_amounts: [ 900, 900 ])
-  end
-
   # Rule 5: percentages are display only.
 
   test "a percentage is worked out from cents and rounded to one decimal" do

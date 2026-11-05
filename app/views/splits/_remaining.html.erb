@@ -2,14 +2,19 @@
     same whether it is zero or not: the organizer should never have to wonder
     whether the line is missing or the figure is nil.
 
-    In custom mode this is the number being worked down to zero, and SplitLogic
-    updates it on every drag. Its own partial because a Turbo Stream redraws it
-    whenever a row is added or removed. %>
+    In custom mode this is the number being worked down to zero, and it is what
+    keeps the total honest now that the sliders themselves are unrestrained. It
+    can read either way: "Left to give" when the rows come to less than the bill,
+    "Over by" when they come to more. SplitLogic updates both on every drag. %>
+<% remaining_cents = split.remaining_cents %>
+
 <div id="remaining" class="mt-4 border-t-2 border-black pt-3">
   <p class="flex items-baseline justify-between">
-    <span class="font-medium">Left to give</span>
+    <span class="font-medium" data-split-logic-target="remainingLabel">
+      <%= remaining_cents.negative? ? "Over by" : "Left to give" %>
+    </span>
     <span class="font-medium tabular-nums" data-split-logic-target="remaining">
-      <%= money(split.remaining_cents) %>
+      <%= money(remaining_cents.abs) %>
     </span>
   </p>
 

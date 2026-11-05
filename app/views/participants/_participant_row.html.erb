@@ -47,19 +47,22 @@
       <%= hidden_field_tag field_name.call(:id), participant.id,
                            id: nil, form: "split_amounts" %>
 
-      <%# Rule 4: the maximum is the total minus every other row, so the amounts
-          can never come to more than the bill. SplitLogic recomputes it on
-          every drag; this is where it starts, worked out by the same rule on
-          the server. %>
+      <%# The max is the whole bill, fixed, and never recomputed.
+
+          It matters that it does not move: a range input draws its thumb at
+          value / max, so changing one row's max slides its thumb even when the
+          amount behind it has not changed a cent. Capping each row at "the
+          total minus everyone else" did exactly that, and made every slider
+          look like it was following the one being dragged.
+
+          Nothing is lost by allowing more than the bill: the remaining figure
+          goes negative, says so, and the split cannot be saved until it
+          balances. %>
       <input type="range"
              name="<%= field_name.call(:amount_cents) %>"
              form="split_amounts"
              min="0"
-             max="<%= SplitMath.maximum_for_row(
-                        total_cents: split.total_cents,
-                        other_amounts: split.participants
-                                            .reject { |other| other == participant }
-                                            .map(&:amount_cents)) %>"
+             max="<%= split.total_cents %>"
              step="1"
              value="<%= participant.amount_cents %>"
              class="w-full accent-black"
