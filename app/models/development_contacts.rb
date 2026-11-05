@@ -9,8 +9,8 @@ class DevelopmentContacts
     "Mateo Cruz" => "+15555550107", "Alex Rivera" => "+15555550108"
   }.freeze
   NAMES = CONTACTS.keys.freeze
-  # The organizer's own fake handles, so a request has somewhere to point.
-  ORGANIZER_HANDLES = { venmo_handle: "erik-r", cashapp_cashtag: "erikr" }.freeze
+  # The organizer's real handles, so a demo request points somewhere real and safe.
+  ORGANIZER_HANDLES = { venmo_handle: "erikrdgz", cashapp_cashtag: "erikrdgz2" }.freeze
 
   def self.flag_path
     Rails.root.join("tmp/contact-preview.txt")
