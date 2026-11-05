@@ -4,16 +4,17 @@ Read SPEC.md first. It is the product and build plan.
 
 ## Why this app exists
 
-I'm applying for a Front End Engineer role at Decile Group (VC Lab / Decile Hub).
-This app is my proof that I can work in their stack, and my prep for their coding challenge.
+I'm a designer and front-end developer learning Rails 8 and Hotwire, the stack Decile Group uses.
+This app is how I'm learning it: a real product with a real database, built to the standard I'd
+hold any production code to.
 
-Their stack: Rails 8, Turbo, Stimulus, Tailwind, Hotwire with ERB. Postgres in production; SQLite is fine here.
-Their posting cares about: polished UI, data-heavy and workflow-heavy interfaces (tables, forms),
-working comfortably in a Rails codebase, and using AI tools daily.
+The stack: Rails 8, Turbo, Stimulus, Tailwind, Hotwire with ERB. Postgres in production; SQLite is
+fine here. The kind of work I want it to show: polished UI, workflow-heavy interfaces (forms,
+lists, money), working comfortably in a Rails codebase, and using AI tools daily.
 
-The hiring manager values:
-- Code he would be proud to take credit for. Quality over speed.
-- Trusting a dev with "a new model, a database change, and associated tests."
+How I want the code built:
+- Code I'd be proud to take credit for. Quality over speed.
+- Each step is a complete change: a model, a migration when needed, and the tests that go with it.
 - Ownership: if a design is missing, mock it; if a product decision is missing, make it and note it.
 - Small, shippable steps. Leave code cleaner than you found it.
 
@@ -25,7 +26,7 @@ The hiring manager values:
 - Server renders HTML. Stimulus only where the browser must react before the server can.
 - Add short comments that explain WHY, not what.
 - Keep a DECISIONS.md: one entry per meaningful choice (e.g. why GET vs PATCH, why a Turbo Frame vs a Stream,
-  why money is integer cents). This is my interview prep.
+  why money is integer cents). I should be able to defend every entry out loud.
 
 ## Naming
 

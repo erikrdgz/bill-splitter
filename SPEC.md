@@ -30,7 +30,7 @@ text per friend with a link to pay you, and a link friends open to mark themselv
 ### Why it exists
 
 - A portfolio piece that shows Rails 8, Hotwire, and a real database working together.
-- Prep for the Decile Group coding challenge: models, migrations, validations, and tests.
+- A way to learn the Rails data layer properly: models, migrations, validations, and tests.
 - Something Erik will actually use with friends.
 
 ### Out of scope for v1

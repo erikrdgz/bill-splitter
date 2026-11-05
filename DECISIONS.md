@@ -1,8 +1,7 @@
 # Decisions
 
 One entry per meaningful choice, newest step last. Each entry says what was decided, why, and
-what the alternative was. This doubles as interview prep: every line here is something to be
-able to defend out loud.
+what the alternative was. Every line here is something I should be able to defend out loud.
 
 ## Step 1 — Rails 8 app with SQLite and Tailwind
 
