@@ -262,6 +262,12 @@
   .keypad-top .keypad-cancel { font-size: 26px; }
   .keypad-display { display: block; text-align: center; padding: 20px 0 30px; color: #fff; font-size: clamp(48px, 15vw, 70px); line-height: 1.2; letter-spacing: -3px; font-weight: 600; font-variant-numeric: tabular-nums; }
   .keypad-display[data-long=true] { font-size: 46px; }
+  /* iOS reads two quick taps as "zoom in", so typing 1, 1 zoomed the page
+     instead of entering 11. manipulation keeps taps and pinch-zoom but drops
+     double-tap zoom. Applied to every control, since any button can be tapped
+     twice fast; user-select stops rapid taps from selecting the digits. */
+  button, a, summary, label, input, select, textarea, .keypad-panel { touch-action: manipulation; }
+  .amount-keypad button { -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
   .amount-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .amount-keypad button { height: 64px; border-radius: 15px; background: #222225; font-size: 26px; font-weight: 450; }
   .amount-keypad button:hover { background: #303035; }

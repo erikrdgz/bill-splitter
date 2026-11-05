@@ -1177,3 +1177,11 @@ The Brakeman ignore for the Text link pinned a fingerprint, and that fingerprint
 as the line passed a new argument. `bin/brakeman` now declares `sms_url` safe by name with
 `--url-safe-methods`, which survives edits around the call and still flags any other model
 value used as a link.
+
+## Taps never zoom: touch-action: manipulation
+
+On iPhone, two quick taps on the same keypad digit zoomed the page instead of typing it twice.
+Every control now has `touch-action: manipulation`, which keeps normal taps and pinch-zoom but
+turns off double-tap zoom. The obvious alternative, `user-scalable=no` in the viewport tag, was
+rejected: it also blocks pinch-zoom, which people with low vision rely on. A small test guards the
+rule, since system tests cannot drive a real iPhone.
