@@ -37,8 +37,15 @@
       <header class="app-header">
         <%= link_to root_path, class: "wordmark", aria: { label: "Bill Splitter" } do %><span>$</span>plit.<% end %>
         <nav aria-label="Main navigation">
-          <%= link_to "New split", root_path, class: current_page?(root_path) ? "active" : nil %>
-          <%= link_to "History", splits_path, class: current_page?(splits_path) ? "active" : nil %>
+          <%# Icons are decorative: the visible word already names each link. %>
+          <%= link_to root_path, class: [ "nav-new", ("active" if current_page?(root_path)) ] do %>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            New split
+          <% end %>
+          <%= link_to splits_path, class: ("active" if current_page?(splits_path)) do %>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8m0-5v5h5M12 7.5V12l3 2"/></svg>
+            History
+          <% end %>
         </nav>
       </header>
       <main id="main" class="page <%= content_for(:page_class) %>">

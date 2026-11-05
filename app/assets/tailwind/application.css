@@ -31,9 +31,13 @@
   .app-header { display: flex; align-items: center; justify-content: space-between; padding: 32px 0; }
   .wordmark { font-size: 34px; letter-spacing: -2px; font-weight: 500; line-height: 1; }
   .wordmark span { color: var(--color-accent); font-weight: 700; }
-  .app-header nav { display: flex; gap: 25px; font-size: 13px; color: var(--color-muted); }
-  .app-header nav a { padding: 10px 0; }
+  .app-header nav { display: flex; align-items: center; gap: 16px; font-size: 13px; color: var(--color-muted); }
+  .app-header nav a { display: inline-flex; align-items: center; gap: 7px; padding: 10px 0; }
+  .app-header nav svg { width: 17px; height: 17px; flex-shrink: 0; }
   .app-header nav a:hover, .app-header nav .active { color: var(--color-accent); }
+  /* The primary action, so it is the one filled control in the header. Its own
+     colors win over the shared nav hover/active rule above. */
+  .app-header nav .nav-new, .app-header nav .nav-new:hover, .app-header nav .nav-new.active { padding: 10px 16px; border-radius: 12px; background: var(--color-accent); color: var(--color-ink); font-weight: 600; }
   .page { max-width: 560px; margin: 44px auto 100px; }
   .page--composer { max-width: none; }
   .page-heading { font-size: 26px; font-weight: 500; letter-spacing: -.8px; margin-bottom: 32px; }
