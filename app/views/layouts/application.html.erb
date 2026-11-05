@@ -11,6 +11,12 @@
 
     <%= yield :head %>
 
+    <%# Turbo 8: when a save redirects back to the page it came from, morph the
+        changed nodes instead of swapping the whole body, and leave the scroll
+        where it was. Without this, saving from halfway down the editor throws
+        the organizer back to the top of the page. %>
+    <%= turbo_refreshes_with method: :morph, scroll: :preserve %>
+
     <link rel="icon" href="/icon.png" type="image/png">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/icon.png">

@@ -66,7 +66,7 @@ chat's call.
 | Screen | Must contain | States to design | Interactions |
 | --- | --- | --- | --- |
 | Quick split (home) | Amount field, people stepper with count, each person's share, a note when one person pays a cent more, a "Save and add names" action | No amount yet; 2 people (minimum); 20 people (maximum) | Share updates on every keystroke and tap, no waiting. Stepper accepts typing too. |
-| Split editor | Title, total, a row per person (name or placeholder, amount, percent, slider, lock), add person, remove person, Even / Custom switch, remaining amount, Share action | Even mode; Custom mode mid-edit; error when the total doesn't add up; a row being added or removed | Dragging one slider moves the untouched rows live. Touched rows lock; tapping the lock frees them. |
+| Split editor | Title, total, a row per person (name or placeholder, amount, percent, slider, lock), add person, remove person, Even / Custom switch, remaining amount, Share action | Even mode; Custom mode mid-edit; error when the total doesn't add up; a row being added or removed | Dragging one slider sets that row only; everyone else stays put. Touched rows lock; tapping the lock frees them for "Spread the rest evenly". Saving is refused until the remaining amount is zero. |
 | People search | Search field, matching saved people, "Add [name] as new person" when nothing matches | No saved people yet; no matches; results | Results narrow as you type. Picking a person fills the row. |
 | Share page (friend view) | Split title, total, each person and their amount, an "I paid" action on each unpaid row | Nobody paid; some paid; all paid; link not found | Tapping "I paid" asks to confirm the name, then marks it. No login. |
 | Split detail (organizer) | Who has paid and who hasn't, amount still owed, copy-link action, edit action | Nothing paid; partly paid; fully paid | Copy link confirms it copied. |
@@ -91,10 +91,20 @@ The server always has the final say.
 1. **Whole cents only.** $100.00 is stored as `10000`. No floating-point money anywhere.
 2. **Even split.** Each person gets `total ÷ people`, rounded down. The leftover cents go one
    each to the first people in list order. $100 for 3 people: 3334, 3333, 3333.
-3. **Custom split.** When you set someone's amount, that row locks. What's left of the total
-   spreads evenly over the unlocked rows, using rule 2.
-4. **Slider limit.** A slider can't go above the total minus everyone else who is locked. If
-   only one row is unlocked, its amount is whatever is left, and its slider is disabled.
+3. **Custom split.** Setting someone's amount sets that row and locks it. Everyone else keeps
+   what they already have — nothing is re-evened out from under the organizer — so money freed
+   up by lowering one row is theirs to hand out. "Spread the rest evenly" gives each unlocked
+   row an equal share of whatever the locked rows leave, using rule 2.
+
+   *Revised 2026-11-05. The original rule re-evened every unlocked row on each change, which
+   undid allocations the organizer had already made: dropping one person of 20/30/50 to zero
+   turned the other two into 50/50 instead of leaving them at 30 and 50.*
+4. **Slider limit.** A slider can't go above the total minus every other row, locked or not.
+   The amounts can therefore never come to more than the bill. They can come to less, and that
+   gap is the remaining amount, which has to reach zero before a custom split can be saved.
+
+   *Revised 2026-11-05 alongside rule 3: when untouched rows keep their amounts, they are
+   holding cents too, so the limit has to count them.*
 5. **Percentages are display only.** They're worked out from cents and shown to one decimal.
    Cents are the source of truth.
 6. **Limits.** 2 to 20 people. The total is at least 1 cent per person and at most $99,999.99.
@@ -137,7 +147,7 @@ the server can: the quick split math, the sliders, and debouncing the search.
 | Search saved people | Stimulus debounce + Turbo Frame `people_results` | `GET /people?query=ma` | `PeopleController#index` |
 | Add a person to a split | Turbo Stream: append the row, update every amount and the remaining total | `POST /splits/:id/participants` | `ParticipantsController#create` |
 | Remove a person | Turbo Stream: remove the row, update amounts | `DELETE /splits/:id/participants/:id` | `ParticipantsController#destroy` |
-| Drag a custom-split slider | Stimulus (`SplitLogic`) moves the other rows live; on release, save | `PATCH /splits/:id` | `SplitsController#update` |
+| Drag a custom-split slider | Stimulus (`SplitLogic`) sets that row and updates the remaining total; saved when the organizer presses Save | `PATCH /splits/:id` | `SplitsController#update` |
 | Open the share link | Turbo Drive page, no login | `GET /s/:share_token` | `SharesController#show` |
 | Friend taps "I paid" | Turbo Stream: replace that row | `POST /s/:share_token/participants/:id/payment` | `PaymentsController#create` |
 | History | Turbo Drive page | `GET /splits` | `SplitsController#index` |

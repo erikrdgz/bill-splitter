@@ -37,7 +37,7 @@
                            "disabled:border-black/15 disabled:text-black/25",
                     aria: { label: "Remove #{participant.display_name}" },
                     form: { data: { turbo_confirm: "Remove #{participant.display_name}?" } } do %>
-        &times;
+      &times;
       <% end %>
     </span>
   </div>
@@ -47,25 +47,25 @@
       <%= hidden_field_tag field_name.call(:id), participant.id,
                            id: nil, form: "split_amounts" %>
 
-      <%# Rule 4: the maximum is the total minus everyone else who is locked.
-          SplitLogic recomputes it on every drag; this is the value it starts at,
-          worked out by the same rule on the server. %>
+      <%# Rule 4: the maximum is the total minus every other row, so the amounts
+          can never come to more than the bill. SplitLogic recomputes it on
+          every drag; this is where it starts, worked out by the same rule on
+          the server. %>
       <input type="range"
              name="<%= field_name.call(:amount_cents) %>"
              form="split_amounts"
              min="0"
              max="<%= SplitMath.maximum_for_row(
                         total_cents: split.total_cents,
-                        other_locked_amounts: split.participants
-                                                   .reject { |other| other == participant }
-                                                   .select(&:locked?)
-                                                   .map(&:amount_cents)) %>"
+                        other_amounts: split.participants
+                                            .reject { |other| other == participant }
+                                            .map(&:amount_cents)) %>"
              step="1"
              value="<%= participant.amount_cents %>"
              class="w-full accent-black"
              aria-label="<%= participant.display_name %>'s share"
              data-split-logic-target="slider"
-             data-action="input->split-logic#drag change->split-logic#save">
+             data-action="input->split-logic#drag">
 
       <%# The hidden field is how an unchecked box still sends a value. It needs
           the form attribute too, or it would belong to the remove button's form. %>

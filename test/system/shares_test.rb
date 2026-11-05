@@ -90,7 +90,7 @@ class SharesTest < ApplicationSystemTestCase
     click_on "Save and add names"
     assert_selector "h1", text: "Edit split"
 
-    click_on "Share this split"
+    click_on "Share and request money"
     assert_selector "h2", text: "Share this split"
 
     Split.find(current_url[%r{/splits/(\d+)}, 1])

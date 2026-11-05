@@ -2,9 +2,20 @@
     same whether it is zero or not: the organizer should never have to wonder
     whether the line is missing or the figure is nil.
 
-    It gets its own partial because custom mode updates it from a Turbo Stream
-    every time a row changes. %>
-<p id="remaining" class="mt-4 flex items-baseline justify-between border-t-2 border-black pt-3">
-  <span class="font-medium">Remaining</span>
-  <span class="font-medium tabular-nums"><%= money(split.remaining_cents) %></span>
-</p>
+    In custom mode this is the number being worked down to zero, and SplitLogic
+    updates it on every drag. Its own partial because a Turbo Stream redraws it
+    whenever a row is added or removed. %>
+<div id="remaining" class="mt-4 border-t-2 border-black pt-3">
+  <p class="flex items-baseline justify-between">
+    <span class="font-medium">Left to give</span>
+    <span class="font-medium tabular-nums" data-split-logic-target="remaining">
+      <%= money(split.remaining_cents) %>
+    </span>
+  </p>
+
+  <% if split.custom? %>
+    <p class="mt-1 text-sm text-black/60">
+      Every share has to be given out before you can save.
+    </p>
+  <% end %>
+</div>

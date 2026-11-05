@@ -69,8 +69,8 @@ class HistoriesTest < ApplicationSystemTestCase
     click_on "Save and add names"
     assert_selector "h1", text: "Edit split"
 
-    fill_in "Title", with: title
-    click_on "Save"
+    fill_in "What was it for?", with: title
+    click_on "Save name and total"
     assert_text "Saved."
 
     Split.find(current_url[%r{/splits/(\d+)}, 1])

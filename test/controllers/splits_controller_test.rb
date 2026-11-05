@@ -346,9 +346,10 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ true, false, false ], split.participants.map(&:locked?)
   end
 
-  # The spec's promise: the server has the final say. The browser here is
-  # claiming amounts that do not add up to the total.
-  test "amounts the browser got wrong are replaced by the server's" do
+  # Custom mode is hand allocation, so the server takes the posted amounts as
+  # the organizer's decision rather than rewriting them. What it will not do is
+  # store a split that does not add up.
+  test "custom amounts that do not add up are refused, not quietly corrected" do
     split = create_split(amount: "100", people_count: 3)
     patch split_url(split), params: { split: { split_mode: "custom" } }
     first, second, third = split.reload.participants.to_a
@@ -361,10 +362,39 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
       ]
     } }
 
-    split.reload
+    assert_response :unprocessable_entity
+    assert_select "div[role=alert]", text: /must add up to the total/
+    assert_equal [ 3334, 3333, 3333 ], split.reload.participants.map(&:amount_cents)
+  end
 
-    assert_equal [ 6000, 2000, 2000 ], split.participants.map(&:amount_cents)
-    assert_equal 10_000, split.participants.sum(&:amount_cents)
+  # The bug this replaced: dropping one row used to re-even every other row,
+  # undoing allocations the organizer had already made.
+  test "setting one row leaves the others exactly where they were" do
+    split = create_split(amount: "100", people_count: 3)
+    patch split_url(split), params: { split: { split_mode: "custom" } }
+    first, second, third = split.reload.participants.to_a
+
+    # Start from 20 / 30 / 50.
+    patch split_url(split), params: { split: {
+      participants_attributes: [
+        { id: first.id, amount_cents: 2000, locked: "1" },
+        { id: second.id, amount_cents: 3000, locked: "1" },
+        { id: third.id, amount_cents: 5000, locked: "1" }
+      ]
+    } }
+
+    assert_equal [ 2000, 3000, 5000 ], split.reload.participants.map(&:amount_cents)
+
+    # Drop the first to zero and hand its share to the other two by hand.
+    patch split_url(split), params: { split: {
+      participants_attributes: [
+        { id: first.id, amount_cents: 0, locked: "1" },
+        { id: second.id, amount_cents: 3300, locked: "1" },
+        { id: third.id, amount_cents: 6700, locked: "1" }
+      ]
+    } }
+
+    assert_equal [ 0, 3300, 6700 ], split.reload.participants.map(&:amount_cents)
   end
 
   test "locked rows that come to more than the total are refused" do
@@ -388,10 +418,14 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
   test "switching back to even frees every row and spreads the money again" do
     split = create_split(amount: "100", people_count: 3)
     patch split_url(split), params: { split: { split_mode: "custom" } }
-    first = split.reload.participants.first
+    first, second, third = split.reload.participants.to_a
 
     patch split_url(split), params: { split: {
-      participants_attributes: [ { id: first.id, amount_cents: 5000, locked: "1" } ]
+      participants_attributes: [
+        { id: first.id, amount_cents: 5000, locked: "1" },
+        { id: second.id, amount_cents: 2500, locked: "0" },
+        { id: third.id, amount_cents: 2500, locked: "0" }
+      ]
     } }
 
     assert_predicate split.reload.participants.first, :locked?

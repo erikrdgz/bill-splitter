@@ -1,8 +1,8 @@
 # Rows on a split: adding one, naming one, removing one.
 #
-# Adding and removing answer with Turbo Streams, because one change moves money
-# in every other row — the amounts and the remaining total have to be redrawn
-# together or the screen would show a split that does not add up.
+# Adding and removing answer with Turbo Streams, because one change can move
+# money in every other row — the amounts and the remaining total have to be
+# redrawn together or the screen would show a split that does not add up.
 #
 # Naming answers with a Turbo Frame instead: it changes one row's name and
 # nothing else, so there is nothing else to redraw.
@@ -15,8 +15,14 @@ class ParticipantsController < ApplicationController
       return refuse("A split can have at most #{SplitMath::PEOPLE_RANGE.max} people.")
     end
 
-    @split.participants.build(position: @split.participants.size + 1)
-    respread_and_save
+    @split.participants.build(position: @split.participants.size + 1, amount_cents: 0)
+
+    # Even mode re-evens everyone. Custom mode gives the new row nothing and
+    # leaves the organizer's allocation alone: the split still adds up, and the
+    # remaining figure shows them there is nothing yet to give this person.
+    @split.apply_even_split if @split.even?
+
+    save_and_redraw
   end
 
   def update
@@ -32,10 +38,21 @@ class ParticipantsController < ApplicationController
       return refuse("A split needs at least #{SplitMath::PEOPLE_RANGE.min} people.")
     end
 
+    # The leaving row's share has to go somewhere or the split stops adding up.
+    # Untouched rows absorb it; if the organizer has set every row by hand there
+    # is nowhere for it to go, and saying so beats silently overruling one of
+    # their amounts.
+    if @split.custom? && no_row_can_absorb?
+      return refuse("Unlock a row first, so #{@participant.display_name}'s share has " \
+                    "somewhere to go.")
+    end
+
     @participant.destroy!
     @split.participants.reload
     @split.renumber_positions
-    respread_and_save
+    @split.even? ? @split.apply_even_split : @split.apply_custom_split
+
+    save_and_redraw
   end
 
   private
@@ -48,6 +65,10 @@ class ParticipantsController < ApplicationController
     @participant = @split.participants.find(params[:id])
   end
 
+  def no_row_can_absorb?
+    @split.participants.reject { |participant| participant == @participant }.all?(&:locked?)
+  end
+
   # Scoped to this browser: one organizer cannot staple another's saved people
   # onto their split by guessing an id. A blank id clears the name back to a
   # placeholder.
@@ -58,10 +79,7 @@ class ParticipantsController < ApplicationController
     Person.owned_by(owner_token).find(person_id)
   end
 
-  # The amounts belong to SplitMath, not to the row that just appeared or left.
-  def respread_and_save
-    @split.even? ? @split.apply_even_split : @split.apply_custom_split
-
+  def save_and_redraw
     if @split.save
       render turbo_stream: [
         turbo_stream.replace("participants", partial: "splits/participants", locals: { split: @split }),
@@ -74,7 +92,8 @@ class ParticipantsController < ApplicationController
   end
 
   def refuse(message)
-    render turbo_stream: turbo_stream.replace("flash", partial: "shared/flash", locals: { message: message }),
+    render turbo_stream: turbo_stream.replace("flash", partial: "shared/flash",
+                                              locals: { message: message, alert: true }),
            status: :unprocessable_entity
   end
 end

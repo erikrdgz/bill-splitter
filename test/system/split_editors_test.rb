@@ -9,27 +9,27 @@ class SplitEditorsTest < ApplicationSystemTestCase
     click_on "Save and add names"
 
     assert_selector "h1", text: "Edit split"
-    assert_field "Title", with: "Split on #{Date.current.strftime('%B %-d')}"
-    assert_field "Total", with: "100.00"
+    assert_field "What was it for?", with: "Split on #{Date.current.strftime('%B %-d')}"
+    assert_field "Total bill", with: "100.00"
     assert_row_amounts [ "$33.34", "$33.33", "$33.33" ]
-    assert_text "Remaining\n$0.00"
+    assert_text "Left to give\n$0.00"
   end
 
   test "the editor renames a split" do
     open_editor_for "100", 3
 
-    fill_in "Title", with: "Dinner at Rosalia"
-    click_on "Save"
+    fill_in "What was it for?", with: "Dinner at Rosalia"
+    click_on "Save name and total"
 
     assert_text "Saved."
-    assert_field "Title", with: "Dinner at Rosalia"
+    assert_field "What was it for?", with: "Dinner at Rosalia"
   end
 
   test "changing the total respreads the shares" do
     open_editor_for "100", 3
 
-    fill_in "Total", with: "90"
-    click_on "Save"
+    fill_in "Total bill", with: "90"
+    click_on "Save name and total"
 
     # Wait for the saved page before reading the rows: all() does not retry, so
     # reading straight after the click can catch the page Turbo is replacing.
@@ -41,18 +41,18 @@ class SplitEditorsTest < ApplicationSystemTestCase
   test "a total that leaves somebody nothing is refused and nothing is saved" do
     editor_url = open_editor_for "100", 3
 
-    fill_in "Total", with: "0.02"
-    click_on "Save"
+    fill_in "Total bill", with: "0.02"
+    click_on "Save name and total"
 
     assert_text "must be at least one cent per person"
     # The rejected page shows what would have been saved, so the organizer can
     # see why two cents between three people is not allowed.
-    assert_field "Total", with: "0.02"
+    assert_field "Total bill", with: "0.02"
 
     # What matters is that none of it reached the database.
     visit editor_url
 
-    assert_field "Total", with: "100.00"
+    assert_field "Total bill", with: "100.00"
     assert_row_amounts [ "$33.34", "$33.33", "$33.33" ]
   end
 

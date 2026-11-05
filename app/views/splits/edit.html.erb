@@ -9,7 +9,7 @@
   <%= render "shared/errors", record: @split %>
 
   <div>
-    <%= form.label :title, "Title", class: "block font-medium" %>
+    <%= form.label :title, "What was it for?", class: "block font-medium" %>
     <%= form.text_field :title,
                         maxlength: 80,
                         class: "mt-2 w-full border-b-2 border-black bg-transparent py-2 " \
@@ -17,7 +17,7 @@
   </div>
 
   <div class="mt-8">
-    <%= form.label :amount, "Total", class: "block font-medium" %>
+    <%= form.label :amount, "Total bill", class: "block font-medium" %>
     <div class="mt-2 flex items-baseline gap-2 border-b-2 border-black">
       <span aria-hidden="true" class="text-2xl">$</span>
       <%= form.text_field :amount,
@@ -28,14 +28,14 @@
     </div>
   </div>
 
-  <%= form.submit "Save",
+  <%= form.submit "Save name and total",
                   class: "mt-6 w-full border-2 border-black bg-black px-4 py-3 " \
                          "font-medium text-white" %>
 <% end %>
 
-<%# data-controller sits on the section so SplitLogic can see the rows and the
-    amounts form together. In even mode there are no sliders for it to drive,
-    and it simply has nothing to do. %>
+<%# data-controller sits on the section so SplitLogic can see the rows, the
+    remaining figure and the save button together. In even mode there are no
+    sliders for it to drive, and it simply has nothing to do. %>
 <section class="mt-12"
          data-controller="split-logic"
          data-split-logic-total-cents-value="<%= @split.total_cents %>">
@@ -60,7 +60,8 @@
 
   <% if @split.custom? %>
     <p class="mt-2 text-sm text-black/70">
-      Drag a share to set it. Rows you touch lock; the rest share what is left.
+      Drag a share to set it. Everyone else stays where they are, so whatever you
+      free up is yours to hand out.
     </p>
   <% end %>
 
@@ -70,10 +71,20 @@
   <%# The amounts form holds no fields of its own. The sliders and locks live up
       in the rows and point at it with the HTML form attribute. %>
   <% if @split.custom? %>
-    <%= form_with model: @split, id: "split_amounts", data: { split_logic_target: "form" } do |form| %>
+    <button type="button"
+            class="mt-6 w-full border-2 border-black px-4 py-3 font-medium
+                   disabled:border-black/25 disabled:text-black/25"
+            data-split-logic-target="spread"
+            data-action="split-logic#spreadTheRest">
+      Spread the rest evenly
+    </button>
+
+    <%= form_with model: @split, id: "split_amounts" do |form| %>
       <%= form.submit "Save amounts",
-                      class: "mt-6 w-full border-2 border-black bg-black px-4 py-3 " \
-                             "font-medium text-white" %>
+                      data: { split_logic_target: "save" },
+                      class: "mt-2 w-full border-2 border-black bg-black px-4 py-3 " \
+                             "font-medium text-white disabled:border-black/25 " \
+                             "disabled:bg-white disabled:text-black/40" %>
     <% end %>
   <% end %>
 
@@ -83,6 +94,6 @@
                        "disabled:border-black/25 disabled:text-black/25" %>
 </section>
 
-<%= link_to "Share this split", split_path(@split),
+<%= link_to "Share and request money", split_path(@split),
             class: "mt-10 block border-2 border-black bg-black px-4 py-3 text-center " \
                    "font-medium text-white" %>

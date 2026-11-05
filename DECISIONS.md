@@ -561,3 +561,72 @@ colours and will not respect a palette until told to.
 
 A zero needs reading and comparing; "All paid" is the answer. The share page does the same
 thing with "Everyone has paid."
+
+## Custom split, revised — hand allocation instead of auto-evening
+
+### The bug
+
+Rule 3 as originally written re-evened every unlocked row on each change. Starting from
+20 / 30 / 50 and dropping the first person to zero turned the other two into 50 / 50, wiping
+out amounts the organizer had deliberately set. Reported as "custom doesn't work as expected",
+and they were right.
+
+### What it does now
+
+Dragging a row sets that row and locks it. Every other row keeps what it already has, so the
+money freed up by lowering someone shows up as "Left to give" for the organizer to hand out
+themselves. 20 / 30 / 50 → drop the first to 0 → the other two stay at 30 and 50 with 20 left
+to give, which can then go 3 to one and 17 to the other.
+
+Rule 4 had to change with it: a slider's maximum is now the total minus **every** other row,
+not just the locked ones. Untouched rows are holding cents too, so counting only locked rows
+would let the amounts add up to more than the bill. This is also what makes the sliders feel
+right — a row can only grow into money somebody else has let go of.
+
+"Spread the rest evenly" is the old behavior kept as a button: the unlocked rows take an equal
+share of whatever the locked rows leave. It is a shortcut the organizer asks for, rather than
+something that happens behind their back.
+
+### The server stopped recomputing custom amounts
+
+`SplitsController#update` used to call `apply_custom_split` on every save, which would have
+undone hand allocation just as surely. In custom mode it now takes the posted amounts and only
+checks them; a split whose rows do not add up is refused by the validation.
+
+**This is still "the server has the final say"** — it just says "no" instead of "here is what
+you meant". Even mode is unchanged: there the amounts are the server's to work out, and
+anything the form claims about them is thrown away.
+
+### Saving is refused before it is attempted
+
+The Save button is disabled while the remaining amount is not zero, and says what is left
+instead ("$33.34 left to give"). Letting someone press Save only to be handed a validation
+error is worse when the screen already knows the answer.
+
+## Why the page used to jump to the top
+
+Every slider release submitted the form, which redirected, which Turbo Drive handled as a full
+page visit — scrolling back to the top each time, from wherever the organizer was.
+
+Two things fixed it:
+
+1. **Sliders no longer save on release.** With hand allocation they cannot: the split is
+   usually mid-edit and would fail validation on every drag. The organizer presses Save when
+   the remaining amount reaches zero.
+2. **`turbo_refreshes_with method: :morph, scroll: :preserve`.** Turbo 8 treats a redirect back
+   to the same page as a refresh: it morphs the changed nodes instead of replacing the body,
+   and leaves the scroll alone. That fixes the same jump for the title form and the mode
+   switch, which still redirect.
+
+There is a system test that scrolls to the bottom, saves, and asserts the page did not jump —
+the regression is covered rather than just fixed.
+
+## Wording
+
+The editor had two buttons both reading "Save", and "Remaining" did not say what it was
+remaining *for*. Now:
+
+- "Title" → "What was it for?", "Total" → "Total bill"
+- "Save" → "Save name and total", beside the separate "Save amounts"
+- "Remaining" → "Left to give", with "Every share has to be given out before you can save."
+- "Share this split" → "Share and request money", since that page now does both

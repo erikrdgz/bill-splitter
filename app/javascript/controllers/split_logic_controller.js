@@ -2,42 +2,51 @@ import { Controller } from "@hotwired/stimulus"
 
 // The custom-split sliders.
 //
-// Mirrors SplitMath rules 3, 4 and 5 so the untouched rows move while a slider
-// is being dragged — the one thing a round trip per pixel could never do. On
-// release the form is submitted and SplitsController recomputes every amount
-// with the real SplitMath, so whatever this controller got up to during the
-// drag is replaced by the server's answer a moment later.
+// Custom mode is hand allocation: dragging a row sets that row and nothing
+// else. Rows the organizer has not touched keep what they were last given,
+// because re-evening them would undo the decision just made — drop one person
+// to zero and the other two should stay where they are, with the freed money
+// showing up as "left to give".
 //
-// Everything here is whole cents. The slider's own min, max, step and value are
-// in cents too, so the browser never rounds money on our behalf.
+// Rule 4 is what keeps this honest: a slider's maximum is the total minus
+// every other row, so the amounts can never add up to more than the bill. They
+// can add up to less, and that gap is the remaining figure the organizer works
+// down to zero before the Save button comes alive.
+//
+// Nothing here saves. SplitsController checks the posted amounts and refuses a
+// split that does not add up, so the server still has the final say — it just
+// says "no" rather than quietly rewriting the allocation.
+//
+// Everything is whole cents. The slider's own min, max, step and value are in
+// cents too, so the browser never rounds money on our behalf.
 export default class extends Controller {
-  static targets = [ "row", "slider", "lock", "amount", "percentage", "form" ]
+  static targets = [
+    "row", "slider", "lock", "amount", "percentage", "remaining", "save", "spread"
+  ]
+
   static values = { totalCents: Number }
 
   connect() {
     if (this.hasSliderTarget) this.#render()
   }
 
-  // Rule 3: touching a row locks it. The organizer has said what this person
-  // pays, so the arithmetic stops deciding for them.
+  // Touching a row locks it: the organizer has said what this person pays, so
+  // "spread the rest evenly" leaves it alone from here on.
   drag(event) {
     const index = this.sliderTargets.indexOf(event.target)
     this.lockTargets[index].checked = true
 
-    this.#respread()
+    this.#render()
   }
 
-  // Tapping the lock frees a row back into the pool.
   toggleLock() {
-    this.#respread()
+    this.#render()
   }
 
-  // On release. The server's version replaces the rows.
-  save() {
-    this.formTarget.requestSubmit()
-  }
-
-  #respread() {
+  // Rule 2 over the rows nobody has set: each gets an equal share of whatever
+  // the locked rows have left. This is the shortcut out of a fiddly allocation,
+  // not something that happens behind the organizer's back.
+  spreadTheRest() {
     const lockedAmounts = this.sliderTargets.map((slider, index) =>
       this.lockTargets[index].checked ? Number(slider.value) : null
     )
@@ -49,8 +58,7 @@ export default class extends Controller {
     this.#render()
   }
 
-  // The same arithmetic as SplitMath.custom_shares: locked rows keep their
-  // amount, and what is left spreads evenly over the rest, never below zero.
+  // The same arithmetic as SplitMath.custom_shares.
   #customShares(lockedAmounts) {
     const unlockedCount = lockedAmounts.filter((amount) => amount === null).length
     if (unlockedCount === 0) return lockedAmounts
@@ -73,33 +81,37 @@ export default class extends Controller {
 
   #render() {
     const amounts = this.sliderTargets.map((slider) => Number(slider.value))
-    const locks = this.lockTargets.map((lock) => lock.checked)
-    const unlockedCount = locks.filter((locked) => !locked).length
+    const claimedCents = amounts.reduce((sum, amount) => sum + amount, 0)
+    const remainingCents = this.totalCentsValue - claimedCents
 
     this.sliderTargets.forEach((slider, index) => {
-      // Rule 4: a row can never claim cents another locked row already holds.
-      const otherLockedTotal = amounts.reduce(
-        (sum, amount, other) => sum + (other !== index && locks[other] ? amount : 0),
-        0
-      )
-      slider.max = Math.max(this.totalCentsValue - otherLockedTotal, 0)
-
-      // Rule 4 again: if this is the only unlocked row, its amount is whatever
-      // is left over, so there is nothing to drag.
-      slider.disabled = !locks[index] && unlockedCount === 1
+      // Rule 4: this row may take everything no other row is holding.
+      slider.max = Math.max(this.totalCentsValue - (claimedCents - amounts[index]), 0)
 
       this.amountTargets[index].textContent = this.#formattedDollars(amounts[index])
       this.percentageTargets[index].textContent = `${this.#percentage(amounts[index])}%`
     })
 
-    this.#renderRemaining(amounts)
+    this.#renderRemaining(remainingCents)
   }
 
-  #renderRemaining(amounts) {
-    const claimed = amounts.reduce((sum, amount) => sum + amount, 0)
-    const remaining = this.element.querySelector("#remaining .tabular-nums")
+  #renderRemaining(remainingCents) {
+    if (this.hasRemainingTarget) {
+      this.remainingTarget.textContent = this.#formattedDollars(remainingCents)
+    }
 
-    if (remaining) remaining.textContent = this.#formattedDollars(this.totalCentsValue - claimed)
+    // Saving a split that does not add up would only earn an error page, so the
+    // button says so before it is pressed.
+    if (this.hasSaveTarget) {
+      this.saveTarget.disabled = remainingCents !== 0
+      this.saveTarget.value = remainingCents === 0
+        ? "Save amounts"
+        : `${this.#formattedDollars(Math.abs(remainingCents))} left to give`
+    }
+
+    if (this.hasSpreadTarget) {
+      this.spreadTarget.disabled = this.lockTargets.every((lock) => lock.checked)
+    }
   }
 
   // Rule 5: display only, one decimal, worked out from cents.

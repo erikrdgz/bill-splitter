@@ -68,13 +68,17 @@ class SplitMath
       locked_amounts.map { |locked_amount| locked_amount || unclaimed_shares.shift }
     end
 
-    # Rule 4: slider limit. One row can never claim cents another locked row has
-    # already claimed. When only one row is unlocked this returns exactly what is
-    # left, which is why the view disables that row's slider.
-    def maximum_for_row(total_cents:, other_locked_amounts:)
+    # Rule 4: slider limit. A row can never claim cents another row already
+    # holds — locked or not. That is what stops the amounts adding up to more
+    # than the total while the organizer is allocating by hand.
+    #
+    # It counts every other row, not only the locked ones, because in custom
+    # mode an untouched row keeps whatever it was last given rather than being
+    # re-evened out from under the organizer.
+    def maximum_for_row(total_cents:, other_amounts:)
       validate_total!(total_cents)
 
-      [ total_cents - other_locked_amounts.sum, 0 ].max
+      [ total_cents - other_amounts.sum, 0 ].max
     end
 
     # Rule 5: percentages are display only, worked out from cents, one decimal.

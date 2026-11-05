@@ -49,12 +49,17 @@ class SplitsController < ApplicationController
   def edit
   end
 
-  # Saves the title and the total together, then hands the amounts back to
-  # SplitMath rather than trusting anything the form said about them. In even
-  # mode that is the whole story; custom mode keeps the locked rows.
+  # In even mode the amounts are the server's to work out, so whatever the form
+  # said about them is thrown away and SplitMath decides.
+  #
+  # In custom mode they are the organizer's own allocation, so they are taken as
+  # posted and only checked. The server still has the final say — it just says
+  # "no" rather than "here is what you meant". A split whose rows do not add up
+  # to its total is refused by the validation, which is the whole point of
+  # custom mode having a remaining figure to work down to zero.
   def update
     @split.assign_attributes(split_params)
-    @split.even? ? @split.apply_even_split : @split.apply_custom_split
+    @split.apply_even_split if @split.even?
 
     if @split.save
       redirect_to edit_split_path(@split), notice: "Saved."

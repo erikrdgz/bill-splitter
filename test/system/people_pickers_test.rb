@@ -82,7 +82,7 @@ class PeoplePickersTest < ApplicationSystemTestCase
     assert_selector "ol#participants > li", count: 3
 
     assert_row_amounts [ "$30.00", "$30.00", "$30.00" ]
-    assert_text "Remaining\n$0.00"
+    assert_text "Left to give\n$0.00"
   end
 
   test "removing a person respreads the money" do

@@ -14,99 +14,158 @@ class CustomSplitsTest < ApplicationSystemTestCase
     click_on "Custom"
 
     assert_selector "input[type='range']", count: 3
-    assert_text "Rows you touch lock"
+    assert_text "Drag a share to set it"
     # Switching mode changes nothing about the money on its own.
     assert_row_amounts [ "$30.00", "$30.00", "$30.00" ]
   end
 
-  # The point of the whole controller: the untouched rows move while the slider
-  # is still being dragged, before anything is saved.
-  test "dragging a share locks that row and moves the untouched rows live" do
-    open_custom_editor_for "90", 3
+  # The bug: dropping one person used to re-even everybody else, undoing
+  # allocations that had already been made.
+  test "setting one share leaves everyone else exactly where they were" do
+    open_custom_editor_for "100", 3
 
-    move_slider "Person 1", 6000
+    move_slider "Person 1", 0
 
-    assert_row_amounts [ "$60.00", "$15.00", "$15.00" ]
+    assert_row_amounts [ "$0.00", "$33.33", "$33.33" ]
     assert_checked_field "Lock Person 1"
     assert_no_checked_field "Lock Person 2"
-    assert_text "Remaining\n$0.00"
+  end
+
+  test "what you free up shows as left to give" do
+    open_custom_editor_for "100", 3
+
+    assert_text "Left to give\n$0.00"
+
+    move_slider "Person 1", 0
+
+    assert_text "Left to give\n$33.34"
+  end
+
+  # The organizer's own worked example: 0 / 33 / 67 out of 100.
+  test "the freed share can be handed out by hand" do
+    open_custom_editor_for "100", 3
+
+    move_slider "Person 1", 0
+    move_slider "Person 2", 3300
+    move_slider "Person 3", 6700
+
+    assert_row_amounts [ "$0.00", "$33.00", "$67.00" ]
+    assert_text "Left to give\n$0.00"
+
+    click_on "Save amounts"
+
+    assert_text "Saved."
+    assert_row_amounts [ "$0.00", "$33.00", "$67.00" ]
   end
 
   test "the percentages follow the amounts" do
-    open_custom_editor_for "90", 3
+    open_custom_editor_for "100", 3
 
-    move_slider "Person 1", 4500
+    move_slider "Person 1", 0
+    move_slider "Person 2", 5000
 
-    assert_row_percentages [ "50.0%", "25.0%", "25.0%" ]
+    assert_row_percentages [ "0.0%", "50.0%", "33.3%" ]
   end
 
-  test "letting go saves, and the server's amounts are what stick" do
-    open_custom_editor_for "90", 3
+  # Rule 4: the amounts can never come to more than the bill, so a row can only
+  # grow into what the others have left.
+  test "a share cannot be pushed past what the others leave" do
+    open_custom_editor_for "100", 3
 
-    move_slider "Person 1", 6000
-    release_slider "Person 1"
+    # Everything is already given out, so this row cannot grow at all.
+    move_slider "Person 1", 9_999_999
 
-    assert_text "Saved."
-    assert_row_amounts [ "$60.00", "$15.00", "$15.00" ]
-    assert_checked_field "Lock Person 1"
+    assert_row_amounts [ "$33.34", "$33.33", "$33.33" ]
+
+    # Free some up, and now it can.
+    move_slider "Person 2", 0
+    move_slider "Person 1", 9_999_999
+
+    assert_row_amounts [ "$66.67", "$0.00", "$33.33" ]
+    assert_text "Left to give\n$0.00"
+  end
+
+  test "saving is refused until every share is given out" do
+    open_custom_editor_for "100", 3
+
+    move_slider "Person 1", 0
+
+    assert_button "$33.34 left to give", disabled: true
+
+    move_slider "Person 2", 6667
+
+    assert_button "Save amounts", disabled: false
+  end
+
+  test "spread the rest evenly fills in the rows nobody has set" do
+    open_custom_editor_for "100", 3
+
+    move_slider "Person 1", 0
+
+    assert_text "Left to give\n$33.34"
+
+    click_on "Spread the rest evenly"
+
+    # Person 1 was touched, so it is locked and keeps its zero. The two rows
+    # nobody has set share the whole bill between them.
+    assert_row_amounts [ "$0.00", "$50.00", "$50.00" ]
+    assert_text "Left to give\n$0.00"
+  end
+
+  test "unlocking a row puts it back into the spread" do
+    open_custom_editor_for "100", 3
+
+    move_slider "Person 1", 4000
+    uncheck "Lock Person 1"
+    click_on "Spread the rest evenly"
+
+    assert_row_amounts [ "$33.34", "$33.33", "$33.33" ]
   end
 
   test "the keyboard drives the sliders too" do
-    open_custom_editor_for "90", 3
+    open_custom_editor_for "100", 3
 
-    # End takes a range input to its maximum, which here is the whole total.
-    slider_for("Person 1").send_keys(:end)
+    # Home takes a range input to its minimum.
+    slider_for("Person 1").send_keys(:home)
 
+    assert_row_amounts [ "$0.00", "$33.33", "$33.33" ]
+
+    # End takes it to its maximum, which is whatever the others have left.
+    slider_for("Person 2").send_keys(:end)
+
+    assert_row_amounts [ "$0.00", "$66.67", "$33.33" ]
+  end
+
+  # The bug: saving from halfway down the page used to throw you back to the top.
+  test "saving keeps you where you were on the page" do
+    open_custom_editor_for "100", 3
+
+    move_slider "Person 1", 0
+    move_slider "Person 2", 6667
+
+    scroll_to_bottom
+    scrolled_to = page.evaluate_script("window.scrollY")
+    assert_operator scrolled_to, :>, 0, "the page should be scrolled before saving"
+
+    click_on "Save amounts"
     assert_text "Saved."
-    assert_row_amounts [ "$90.00", "$0.00", "$0.00" ]
-  end
 
-  test "a locked row keeps its share while the others are dragged" do
-    open_custom_editor_for "120", 3
-
-    move_slider "Person 1", 6000
-    move_slider "Person 2", 4000
-
-    assert_row_amounts [ "$60.00", "$40.00", "$20.00" ]
-  end
-
-  # Rule 4: with one row left unlocked, its amount is whatever is left, so there
-  # is nothing to drag.
-  test "the last unlocked slider is disabled" do
-    open_custom_editor_for "90", 3
-
-    check "Lock Person 1"
-    check "Lock Person 2"
-
-    assert slider_for("Person 3").disabled?
-    assert_not slider_for("Person 1").disabled?
-  end
-
-  test "unlocking a row puts it back in the pool" do
-    open_custom_editor_for "90", 3
-
-    move_slider "Person 1", 6000
-
-    assert_row_amounts [ "$60.00", "$15.00", "$15.00" ]
-
-    uncheck "Lock Person 1"
-
-    assert_row_amounts [ "$30.00", "$30.00", "$30.00" ]
+    assert_operator page.evaluate_script("window.scrollY"), :>, 0,
+                    "saving threw the page back to the top"
   end
 
   test "switching back to even frees every row" do
-    open_custom_editor_for "90", 3
+    open_custom_editor_for "100", 3
 
-    move_slider "Person 1", 6000
-    release_slider "Person 1"
+    move_slider "Person 1", 0
+    move_slider "Person 2", 6667
+    click_on "Save amounts"
     assert_text "Saved."
 
     click_on "Even"
 
-    # Wait for the reloaded page before reading the rows: all() does not retry.
     assert_no_selector "input[type='range']"
-
-    assert_row_amounts [ "$30.00", "$30.00", "$30.00" ]
+    assert_row_amounts [ "$33.34", "$33.33", "$33.33" ]
   end
 
   private
@@ -132,6 +191,10 @@ class CustomSplitsTest < ApplicationSystemTestCase
   # Selenium cannot drag a range input usefully, so the value is set and the
   # events a real drag would fire are dispatched. What is being tested is how
   # SplitLogic reacts to those events, which is the part that could break.
+  #
+  # A range input clamps whatever it is given to its own max, which is exactly
+  # how rule 4 is enforced in the browser — so asking for more than is available
+  # here behaves the same as dragging past the end of the track.
   def move_slider(name, cents)
     execute_script(<<~JS, slider_for(name), cents)
       const [ slider, value ] = arguments
@@ -140,9 +203,7 @@ class CustomSplitsTest < ApplicationSystemTestCase
     JS
   end
 
-  def release_slider(name)
-    execute_script(<<~JS, slider_for(name))
-      arguments[0].dispatchEvent(new Event("change", { bubbles: true }))
-    JS
+  def scroll_to_bottom
+    execute_script("window.scrollTo(0, document.body.scrollHeight)")
   end
 end
