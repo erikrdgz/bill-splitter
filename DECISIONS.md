@@ -1185,3 +1185,19 @@ Every control now has `touch-action: manipulation`, which keeps normal taps and 
 turns off double-tap zoom. The obvious alternative, `user-scalable=no` in the viewport tag, was
 rejected: it also blocks pinch-zoom, which people with low vision rely on. A small test guards the
 rule, since system tests cannot drive a real iPhone.
+
+## Portraits are eight small files, preloaded; the person card has no focus ring
+
+On a phone the connect sheet showed initials, then a portrait drawn in halfway, and motion felt
+slow. The cause was one 2.4 MB sprite holding all eight portraits for avatars shown at 52 px:
+it streamed in over the initials and was re-decoded during animations. It is now eight files of
+about 6 KB, each picked by a CSS class (`avatar-photo--3`), and the layout preloads them in demo
+mode because a closed `<dialog>` does not load its images until it opens. `#render` also stopped
+rebuilding each row's avatar on every slider tick; it redraws only when the person changes.
+
+The sheets' backdrop blur is gone too. Blurring the whole page behind a sheet every frame is a
+known cause of stutter on phones, and a darker scrim reads the same.
+
+The draft card is focusable only so arrow keys can reveal Delete. Its outline and the iOS grey
+tap flash both painted over the whole card and looked broken, so both are off for the card; the
+controls inside it keep their own focus styles.

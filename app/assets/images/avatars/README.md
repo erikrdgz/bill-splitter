@@ -1,10 +1,10 @@
 # Contact portraits
 
-`contact-portraits.png` contains eight generated portraits of fictional adults in a
-4-column × 2-row grid. Created with the image-generation tool for the local sample contacts.
-CSS selects a tile without creating eight duplicate image downloads.
+`portrait-0.jpg` to `portrait-7.jpg` are eight generated portraits of fictional adults, one
+small file each (168 px square, about 6 KB). Created with the image-generation tool for the
+sample contacts. They replaced a single 2.4 MB sprite that loaded slowly on phones.
 
-Row 1: Maya Chen, Jordan Lee, Sam Taylor, Priya Shah.
-Row 2: Chris Park, Nina Patel, Mateo Cruz, Alex Rivera.
+0 Maya Chen, 1 Jordan Lee, 2 Sam Taylor, 3 Priya Shah,
+4 Chris Park, 5 Nina Patel, 6 Mateo Cruz, 7 Alex Rivera.
 
-These are preview assets, not photos of real users. Unknown contacts retain initials.
+These are preview assets, not photos of real users. Unknown contacts keep their initials.

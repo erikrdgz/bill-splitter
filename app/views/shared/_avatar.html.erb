@@ -2,6 +2,6 @@
 <span class="avatar avatar--<%= avatar_tone(name) %> <%= local_assigns[:small] ? 'avatar--small' : '' %>" aria-hidden="true">
   <%= avatar_initials(name) %>
   <% unless portrait.nil? %>
-    <span class="avatar-photo" style="background-position: <%= portrait % 4 * 100.0 / 3 %>% <%= portrait / 4 * 100 %>%"></span>
+    <span class="avatar-photo avatar-photo--<%= portrait %>"></span>
   <% end %>
 </span>

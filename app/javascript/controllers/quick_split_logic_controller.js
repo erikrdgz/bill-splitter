@@ -229,12 +229,20 @@ export default class extends Controller {
       element.querySelector(".draft-connect").dataset.connected = String(Boolean(row.name))
       const avatar = element.querySelector("[data-share-row-avatar]")
       avatar.hidden = !row.name
-      const words = name.split(/\s+/)
-      const tone = Array.from(name).reduce((sum, character) => sum + character.codePointAt(0), 0) % 5
-      avatar.className = `avatar avatar--small ${row.name ? `avatar--${tone}` : "avatar--placeholder"}`
-      avatar.textContent = row.name ? [words[0], words.length > 1 ? words.at(-1) : ""].map(word => word[0] || "").join("").toUpperCase() : index + 1
       const friend = this.friendTargets.find(button => button.dataset.personId === String(row.person_id))
-      addPortrait(avatar, row.portrait_index ?? friend?.dataset.portraitIndex)
+      const portrait = row.portrait_index ?? friend?.dataset.portraitIndex
+      // #render runs on every slider tick. Rebuilding the avatar each time
+      // re-created the photo and made dragging stutter, so only redraw it when
+      // the person on this row actually changes.
+      const avatarKey = `${row.name || index + 1}|${portrait ?? ""}`
+      if (avatar.dataset.key !== avatarKey) {
+        avatar.dataset.key = avatarKey
+        const words = name.split(/\s+/)
+        const tone = Array.from(name).reduce((sum, character) => sum + character.codePointAt(0), 0) % 5
+        avatar.className = `avatar avatar--small ${row.name ? `avatar--${tone}` : "avatar--placeholder"}`
+        avatar.textContent = row.name ? [words[0], words.length > 1 ? words.at(-1) : ""].map(word => word[0] || "").join("").toUpperCase() : index + 1
+        addPortrait(avatar, portrait)
+      }
       const slider = element.querySelector("[data-share-row-slider]")
       slider.max = maximum
       slider.value = row.amount_cents
