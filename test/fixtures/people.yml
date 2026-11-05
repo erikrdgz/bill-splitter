@@ -1,0 +1,19 @@
+# Names the organizer has saved. owner_token stands in for the signed cookie a
+# real browser would carry.
+
+marissa:
+  name: Marissa
+  owner_token: organizer-token
+
+marcus:
+  name: Marcus
+  owner_token: organizer-token
+
+dana:
+  name: Dana
+  owner_token: organizer-token
+
+# Same name, different browser. Proves "unique per owner" is scoped, not global.
+stranger_marissa:
+  name: Marissa
+  owner_token: other-browser-token

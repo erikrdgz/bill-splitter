@@ -1,0 +1,28 @@
+# $100 split three ways: 3334 + 3333 + 3333. Every fixture split adds up to its
+# total, because a split that does not add up is one the app refuses to save.
+
+dinner:
+  title: Dinner at Rosalia
+  total_cents: 10000
+  split_mode: even
+  share_token: dinner-share-token
+  owner_token: organizer-token
+  created_at: 2026-11-02 19:30:00
+
+# Older, so history ordering has something to sort.
+taxi:
+  title: Taxi home
+  total_cents: 4500
+  split_mode: even
+  share_token: taxi-share-token
+  owner_token: organizer-token
+  created_at: 2026-10-28 23:05:00
+
+# A different browser's split. Used to prove one browser cannot edit another's.
+stranger_brunch:
+  title: Someone else's brunch
+  total_cents: 6000
+  split_mode: even
+  share_token: stranger-share-token
+  owner_token: other-browser-token
+  created_at: 2026-11-01 11:00:00

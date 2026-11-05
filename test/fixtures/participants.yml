@@ -1,0 +1,43 @@
+# position is 1-based and sets list order, who gets the leftover cent, and the
+# "Person 3" placeholder name.
+
+dinner_marissa:
+  split: dinner
+  person: marissa
+  position: 1
+  amount_cents: 3334
+
+dinner_marcus:
+  split: dinner
+  person: marcus
+  position: 2
+  amount_cents: 3333
+
+# No person: a placeholder, shown as "Person 3".
+dinner_placeholder:
+  split: dinner
+  position: 3
+  amount_cents: 3333
+
+taxi_marissa:
+  split: taxi
+  person: marissa
+  position: 1
+  amount_cents: 2250
+
+taxi_dana:
+  split: taxi
+  person: dana
+  position: 2
+  amount_cents: 2250
+
+stranger_one:
+  split: stranger_brunch
+  person: stranger_marissa
+  position: 1
+  amount_cents: 3000
+
+stranger_two:
+  split: stranger_brunch
+  position: 2
+  amount_cents: 3000
