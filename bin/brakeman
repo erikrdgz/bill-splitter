@@ -3,5 +3,9 @@ require "rubygems"
 require "bundler/setup"
 
 ARGV.unshift("--ensure-latest")
+# PaymentText#sms_url always starts with the literal sms: scheme (see DECISIONS.md),
+# so it is declared safe by name instead of pinning a fingerprint that breaks
+# every time the line around it changes.
+ARGV.unshift("--url-safe-methods", "sms_url")
 
 load Gem.bin_path("brakeman", "brakeman")

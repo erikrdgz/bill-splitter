@@ -1168,3 +1168,10 @@ the landing page, so a shared link still gets it once.
 change (slider drags, restored drafts), so animating from inside it would replay the motion at the
 wrong times. `confirmConnection` adds a `just-connected` class after the redraw instead; the
 keyframes pop the portrait in, slide the name over, and flash the border once.
+
+## Brakeman trusts sms_url by name, not by fingerprint
+
+The Brakeman ignore for the Text link pinned a fingerprint, and that fingerprint changed as soon
+as the line passed a new argument. `bin/brakeman` now declares `sms_url` safe by name with
+`--url-safe-methods`, which survives edits around the call and still flags any other model
+value used as a link.
