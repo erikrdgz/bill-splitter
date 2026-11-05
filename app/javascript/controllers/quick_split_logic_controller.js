@@ -179,7 +179,23 @@ export default class extends Controller {
       person_id: name === this.connectionOriginalName ? this.connectionPersonId : ""})
     await this.closeConnection()
     this.#render()
-    this.sharesTarget.children[this.connectionIndex]?.scrollIntoView({ block: "nearest", behavior: "instant" })
+    const row = this.sharesTarget.children[this.connectionIndex]
+    row?.scrollIntoView({ block: "nearest", behavior: "instant" })
+    this.#celebrate(row)
+  }
+  // #render rewrites the row in place, which on its own is an abrupt jump from
+  // "Connect" to a person. This is only a CSS class; the keyframes do the work,
+  // and it is applied here rather than in #render so redrawing for any other
+  // reason (a slider, a restored draft) never replays it.
+  #celebrate(row) {
+    const button = row?.querySelector(".draft-connect")
+    if (!button) return
+    button.classList.remove("just-connected")
+    void button.offsetWidth // restart the animation if the row was connected moments ago
+    button.classList.add("just-connected")
+    button.addEventListener("animationend", event => {
+      if (event.target === button) button.classList.remove("just-connected")
+    }, {once: true})
   }
   prepareSubmit(event) {
     if (!this.rows.length || !this.total || this.total < this.rows.length || this.#remaining() < 0) {

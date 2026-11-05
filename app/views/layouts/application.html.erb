@@ -32,10 +32,11 @@
   </head>
 
   <body class="app-body antialiased">
+    <%= render "shared/intro" if play_intro? %>
     <a class="skip-link" href="#main">Skip to content</a>
     <div class="app-shell">
       <header class="app-header">
-        <%= link_to root_path, class: "wordmark", aria: { label: "Bill Splitter" } do %><span>$</span>plit.<% end %>
+        <%= link_to root_path, class: "wordmark", aria: { label: "Bill Splitter" } do %><%= render "shared/wordmark" %><% end %>
         <nav aria-label="Main navigation">
           <%# Icons are decorative: the visible word already names each link. %>
           <%= link_to root_path, class: [ "nav-new", ("active" if current_page?(root_path)) ] do %>

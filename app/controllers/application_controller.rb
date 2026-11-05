@@ -5,7 +5,7 @@ class ApplicationController < ActionController::Base
   # Changes to the importmap will invalidate the etag for HTML responses
   stale_when_importmap_changes
 
-  helper_method :owner_token
+  helper_method :owner_token, :play_intro?
 
   private
 
@@ -30,5 +30,16 @@ class ApplicationController < ActionController::Base
     }
 
     token
+  end
+
+  # The opening animation plays once per browser session, on whichever page
+  # opens it. The session cookie remembers it has played, so the server decides
+  # before any HTML is sent and the page never flashes the intro and then hides
+  # it. Tests switch it off in config/environments/test.rb.
+  def play_intro?
+    return false if Rails.configuration.x.intro == false
+    return false if session[:intro_played]
+
+    session[:intro_played] = true
   end
 end

@@ -1,0 +1,11 @@
+<%# The opening animation: the logo fades in, a line cuts it in half, the halves
+    part, and the whole screen fades away to the page underneath. It is pure CSS
+    (see .intro in the stylesheet); the Stimulus controller only deletes the
+    overlay afterwards so it does not sit invisibly over the page.
+
+    data-turbo-temporary keeps it out of Turbo's page snapshots, otherwise
+    pressing Back would restore the page with the intro on top of it. %>
+<div class="intro" aria-hidden="true" data-turbo-temporary
+     data-controller="intro-logic" data-action="animationend->intro-logic#finish">
+  <%= render "shared/wordmark" %>
+</div>

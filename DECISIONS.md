@@ -1140,3 +1140,31 @@ The individual text only carried the Venmo or Cash App link, so a friend who nev
 message had no way to reach "I paid". `PaymentText` now takes the share URL and appends it. The
 URL is passed in from the view instead of built in the model, because building a URL needs the
 request's host and a plain Ruby model should not reach for the request.
+
+## The logo is "$plit", split in two, and it moves in plain CSS
+
+The trailing period is gone: "$plit" is the brand. The nav logo and the opening animation share one
+partial (`shared/_wordmark`) that draws the word twice, clips one copy to its top half and the other
+to its bottom half, and nudges them apart with a line across the cut. Live text rather than an SVG
+or PNG keeps it in the app's font, lets it scale with `em`, and means the nav and the intro cannot
+drift apart.
+
+**No animation gem.** Motion here is CSS keyframes and transitions, plus the Web Animations API
+that the bottom sheets already use. Rails has no idiomatic "motion gem", and the JS libraries
+(Motion, GSAP) are for choreography this app does not have: a handful of one-shot transitions.
+Staying in CSS means no new importmap pin, no bundle weight, `prefers-reduced-motion` handled in
+one place, and nothing new to explain in a walkthrough. If the app ever needs spring physics or
+gesture-driven timelines, that is the moment to pin `motion` through importmap.
+
+**The intro plays once per browser session, decided by the server.** `play_intro?` flips a flag in
+the session cookie, so the HTML either contains the overlay or does not. Doing this in JavaScript
+(sessionStorage) would flash the overlay and then hide it on every visit. The overlay is
+`data-turbo-temporary` so Turbo's Back-button snapshots never restore it, `pointer-events: none` so it
+can never trap a tap, and a Stimulus controller deletes it when the fade-out ends. With reduced
+motion it is not shown at all. Product call: it plays on whichever page opens the session, not only
+the landing page, so a shared link still gets it once.
+
+**Connecting a person animates a CSS class, not the render.** `#render` redraws every row on every
+change (slider drags, restored drafts), so animating from inside it would replay the motion at the
+wrong times. `confirmConnection` adds a `just-connected` class after the redraw instead; the
+keyframes pop the portrait in, slide the name over, and flash the border once.

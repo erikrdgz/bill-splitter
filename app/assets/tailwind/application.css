@@ -30,7 +30,7 @@
   .app-shell { max-width: 1040px; margin: auto; padding: 0 40px; }
   .app-header { display: flex; align-items: center; justify-content: space-between; padding: 32px 0; }
   .wordmark { font-size: 34px; letter-spacing: -2px; font-weight: 500; line-height: 1; }
-  .wordmark span { color: var(--color-accent); font-weight: 700; }
+  .wordmark-half > span { color: var(--color-accent); font-weight: 700; }
   .app-header nav { display: flex; align-items: center; gap: 16px; font-size: 13px; color: var(--color-muted); }
   .app-header nav a { display: inline-flex; align-items: center; gap: 7px; padding: 10px 0; }
   .app-header nav svg { width: 17px; height: 17px; flex-shrink: 0; }
@@ -648,4 +648,47 @@
     .shared-check path { animation: draw-stroke 380ms cubic-bezier(.65, 0, .35, 1) 480ms both; }
   }
   @keyframes draw-stroke { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+}
+
+/* The split logo. Two copies of the word, each clipped to one half and nudged
+   apart; a canvas-coloured line is drawn across the cut. --split is how far
+   each half moves, in em so it scales with the logo. */
+@layer components {
+  .wordmark-art { --split: .045em; --cut: 54%; position: relative; display: inline-block; white-space: nowrap; }
+  .wordmark-half { display: block; }
+  .wordmark-half--top { clip-path: inset(-20% -20% calc(100% - var(--cut)) -20%); translate: calc(var(--split) * -1) 0; }
+  .wordmark-half--bottom { position: absolute; inset: 0; clip-path: inset(var(--cut) -20% -20% -20%); translate: var(--split) 0; }
+  .wordmark-art::after { content: ""; position: absolute; left: -.08em; right: -.08em; top: calc(var(--cut) - .02em); height: .04em; min-height: 1.5px; background: var(--color-canvas); }
+
+  /* Plays once per session. Beats, in order: the logo fades in, the line is
+     drawn across it, the halves part, the overlay fades out. */
+  .intro { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: var(--color-canvas); pointer-events: none; }
+  .intro .wordmark-art { --split: .06em; font-size: clamp(72px, 22vw, 128px); font-weight: 500; letter-spacing: -.06em; line-height: 1; }
+  @media (prefers-reduced-motion: reduce) { .intro { display: none; } }
+  @media (prefers-reduced-motion: no-preference) {
+    .intro { animation: intro-out 600ms ease 2100ms forwards; }
+    .intro .wordmark-art { animation: intro-logo-in 600ms ease both; }
+    .intro .wordmark-art::after { transform-origin: center; animation: intro-cut 420ms cubic-bezier(.65, 0, .35, 1) 800ms both; }
+    .intro .wordmark-half--top { animation: intro-part-top 520ms cubic-bezier(.22, 1, .36, 1) 1250ms both; }
+    .intro .wordmark-half--bottom { animation: intro-part-bottom 520ms cubic-bezier(.22, 1, .36, 1) 1250ms both; }
+  }
+  @keyframes intro-logo-in { from { opacity: 0; scale: .96; } to { opacity: 1; scale: 1; } }
+  @keyframes intro-cut { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  @keyframes intro-part-top { from { translate: 0 0; } to { translate: calc(var(--split) * -1) 0; } }
+  @keyframes intro-part-bottom { from { translate: 0 0; } to { translate: var(--split) 0; } }
+  @keyframes intro-out { to { opacity: 0; visibility: hidden; } }
+}
+
+/* Connecting a person swaps a "Connect" button for a name and portrait in one
+   frame. These keyframes give the swap a beat: the portrait pops in, the text
+   slides over to make room, and the border flashes the accent and settles. */
+@layer components {
+  @media (prefers-reduced-motion: no-preference) {
+    .draft-connect.just-connected { animation: connect-glow 900ms ease-out; }
+    .draft-connect.just-connected .avatar { animation: avatar-pop 460ms cubic-bezier(.34, 1.56, .64, 1) both; }
+    .draft-connect.just-connected .draft-connect-copy { animation: connect-copy-in 380ms cubic-bezier(.22, 1, .36, 1) 60ms both; }
+  }
+  @keyframes connect-glow { from { border-color: var(--color-accent); box-shadow: 0 0 0 5px #00e8d52e; } to { border-color: #323237; box-shadow: 0 0 0 0 #00e8d500; } }
+  @keyframes avatar-pop { from { opacity: 0; scale: .4; } to { opacity: 1; scale: 1; } }
+  @keyframes connect-copy-in { from { opacity: 0; translate: -10px 0; } to { opacity: 1; translate: 0 0; } }
 }
