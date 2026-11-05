@@ -11,11 +11,12 @@ class MobileInteractionsTest < ApplicationSystemTestCase
     click_on "Add “Maya Chen” as a new person"
     assert_link "Name Maya Chen"
     click_on "New split"
-    click_on "Add", exact: true
+    start_group
+    click_on "Add person", exact: true
     click_on "Connect Person 1"
     within "dialog[open]" do
       assert_no_selector "[role=option]"
-      assert_no_text "Maya Chen"
+      assert_button "Choose Maya Chen"
       assert_equal "connection-title", page.evaluate_script("document.activeElement.id")
       fill_in "Name", with: "ma"
       assert_selector "[role=option]", text: "Maya Chen"
@@ -27,7 +28,7 @@ class MobileInteractionsTest < ApplicationSystemTestCase
       click_on "Connect", exact: true
     end
     assert_button "Connect Maya Chen"
-    click_on "Add", exact: true
+    click_on "Add person", exact: true
     click_on "Connect Person 2"
     within "dialog[open]" do
       fill_in "Name", with: "Nina Patel"
@@ -183,21 +184,10 @@ class MobileInteractionsTest < ApplicationSystemTestCase
     assert_row_amounts [ "$50.00", "$50.00" ]
   end
 
-  test "tapping outside either amount editor cancels the draft" do
+  test "tapping outside a person amount editor cancels the draft" do
     visit root_path
     enter_bill_amount("100")
     set_people_count(2)
-    find_field("Amount").click
-    within "dialog[open]" do
-      click_on "Clear", exact: true
-      click_on "9", exact: true
-    end
-    assert_field "Amount", with: "9"
-    tap_backdrop(x: 180, y: 80)
-    assert_no_selector "dialog[open]"
-    assert_field "Amount", with: "100"
-    assert_button "Edit Person 1's amount", text: "$50"
-
     click_on "Edit Person 1's amount"
     within "dialog[open]" do
       click_on "Clear", exact: true
@@ -234,9 +224,6 @@ class MobileInteractionsTest < ApplicationSystemTestCase
       assert_no_selector "dialog[open]"
       assert_button "Connect Person 1"
     end
-    find_field("Amount").click
-    tap_backdrop(x: 180, y: 80)
-    assert_no_selector "dialog[open]"
   end
 
   test "default amount is centered and focus returns without a box" do

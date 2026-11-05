@@ -4,11 +4,16 @@ import { openSheet, closeSheet } from "sheet_motion"
 // Totals preview in the existing bill element. Person amounts stay isolated
 // until confirmed, with their name and amount above the touch controls.
 export default class extends Controller {
-  static targets = ["field", "dialog", "display", "error", "context"]
-  static values = { person: { type: Boolean, default: false } }
+  static targets = ["field", "dialog", "display", "error", "context", "panel"]
+  static values = { inline: { type: Boolean, default: false }, person: { type: Boolean, default: false } }
 
-  connect() { this.#fitAmount() }
+  connect() {
+    this.#fitAmount()
+    if (this.inlineValue) this.draft = this.fieldTarget.value.replace(/\.00$/, "") || "0"
+  }
+  sync() { this.#fitAmount() }
   open() {
+    if (this.inlineValue && this.element.dataset.locked === "true") return
     this.dispatch("prepare")
     this.original = this.fieldTarget.value
     this.draft = this.original.replace(/[^0-9.]/g, "").replace(/\.00$/, "") || "0"
@@ -18,7 +23,10 @@ export default class extends Controller {
       this.dialogTarget.setAttribute("aria-label", `Amount for ${this.fieldTarget.dataset.personName}`)
     }
     this.#render(false)
-    openSheet(this.dialogTarget, {onDismiss: () => this.close()})
+    if (this.inlineValue) {
+      this.panelTarget.hidden = false
+      this.dispatch("editing")
+    } else openSheet(this.dialogTarget, {onDismiss: () => this.close()})
   }
   openKey(event) {
     if (event.key === "Enter" || event.key === " ") { event.preventDefault(); this.open() }
@@ -32,11 +40,19 @@ export default class extends Controller {
   clear() { this.draft = "0"; this.errorTarget.hidden = true; this.#render() }
   erase() { this.draft = this.draft.slice(0, -1) || "0"; this.errorTarget.hidden = true; this.#render() }
   key(event) {
+    if (this.inlineValue && this.element.dataset.locked === "true") return
+    // Enter on a focused keypad button should activate that button normally.
+    if (event.key === "Enter" && event.target.tagName === "BUTTON") return
     if (/^[0-9.]$/.test(event.key)) { event.preventDefault(); this.#append(event.key) }
     if (event.key === "Backspace" || event.key === "Delete") { event.preventDefault(); this.erase() }
-    if (event.key === "Enter") { event.preventDefault(); this.apply() }
+    if (event.key === "Enter") {
+      event.preventDefault()
+      if (this.inlineValue && this.element.dataset.updating !== "true") this.dispatch("continue")
+      else this.apply()
+    }
   }
-  apply() {
+  async apply() {
+    if (this.applying) return
     const [whole, fraction = ""] = this.draft.split(".")
     const cents = Number(whole) * 100 + Number(`${fraction}00`.slice(0, 2))
     const maximum = Number(this.fieldTarget.dataset.maxCents || 9999999)
@@ -47,10 +63,23 @@ export default class extends Controller {
     }
     const remainder = cents % 100
     this.#write(`${Math.floor(cents / 100)}${remainder ? `.${String(remainder).padStart(2, "0")}` : ""}`)
+    if (this.inlineValue) {
+      this.applying = true
+      this.panelTarget.inert = true
+      if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        await this.panelTarget.animate([{ opacity: 1 }, { opacity: 0, transform: "translateY(6px)" }], { duration: 160, easing: "ease-out" }).finished
+      }
+      this.panelTarget.hidden = true
+      this.panelTarget.inert = false
+      this.applying = false
+    } else closeSheet(this.dialogTarget)
     this.dispatch("apply", {detail: {cents}})
-    closeSheet(this.dialogTarget)
   }
   #write(value) {
+    if (this.inlineValue) {
+      this.panelTarget.hidden = false
+      this.dispatch("editing")
+    }
     this.fieldTarget.value = value
     this.#fitAmount()
     this.fieldTarget.dispatchEvent(new Event("input", {bubbles: true}))

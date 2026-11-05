@@ -1,24 +1,32 @@
 require "application_system_test_case"
 
 class AmountKeypadsTest < ApplicationSystemTestCase
-  test "total typing updates the existing amount with a clear backdrop and cancel restores it" do
+  test "the inline bill keypad accepts exact cents and requires a title before splitting" do
     visit root_path
-    enter_bill_amount("1000")
+    assert_no_button "Add person"
+    assert_no_button "Request split"
+    assert_no_button "Accept amount"
+    assert_button "Split up", disabled: true
+    type_amount "1000.25"
+    assert_field "Amount", with: "1000.25"
+    assert_no_selector "dialog[open]"
+    assert_button "Split up", disabled: true
+    fill_in "What's this for?", with: "Dinner"
+    click_on "Split up"
+    assert_no_selector ".entry-keypad"
+    assert_button "Add person"
+    assert_field "Amount", with: "1000.25", readonly: true
+    assert_field "What's this for?", with: "Dinner", readonly: true
     set_people_count(2)
-    find_field("Amount").click
-    within "dialog[open]" do
-      click_on "Clear", exact: true
-      type_amount "250"
-      assert_selector ".keypad-display", text: "$250"
-      assert_equal "inset(50%)", page.evaluate_script("getComputedStyle(document.querySelector('dialog[open] .keypad-display')).clipPath")
-    end
-    assert_equal "250", find_field("Amount", visible: :all).value
-    assert_equal "rgba(0, 0, 0, 0)", page.evaluate_script("getComputedStyle(document.querySelector('dialog[open]'), '::backdrop').backgroundColor")
-    assert_equal "none", page.evaluate_script("getComputedStyle(document.querySelector('dialog[open]'), '::backdrop').backdropFilter")
-    assert_equal [ "$125", "$125" ], all("[data-share-row-amount]", visible: :all).map(&:text)
-    click_on "Cancel amount"
-    assert_field "Amount", with: "1000"
-    assert_selector "[data-share-row-amount]", text: "$500", count: 2
+    assert_button "Edit Person 1's amount", text: "$500.13"
+    click_on "Edit bill details"
+    assert_button "Add person"
+    assert_no_selector ".entry-keypad"
+    fill_in "What's this for?", with: "Birthday dinner"
+    enter_bill_amount("200")
+    assert_button "Edit Person 1's amount", text: "$100"
+    assert_button "Edit Person 2's amount", text: "$100"
+    assert_field "What's this for?", with: "Birthday dinner", readonly: true
   end
 
   test "a named person's keypad keeps context and saves exact cents without changing the bill" do

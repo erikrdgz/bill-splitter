@@ -9,22 +9,29 @@ class SplitDraft
   def save
     saved = false
     Split.transaction do
+      # Editing replaces the rows wholesale; the only thing a row carries that
+      # the form cannot is whether it has been paid, so remember that by id.
+      paid_times = @split.participants.to_h { |participant| [ participant.id.to_s, participant.paid_at ] }
+      @split.participants.destroy_all if @split.persisted?
       @split.split_mode = @rows.any? { |row| row[:locked] == "1" } ? :custom : :even
       @rows.first(SplitMath::PEOPLE_RANGE.max + 1).each_with_index do |row, index|
         person = connected_person(row)
         @split.participants.build(position: index + 1, person: person,
           amount_cents: row[:amount_cents], locked: row[:locked] == "1",
-          payment_method: row[:payment_method].presence)
+          payment_method: row[:payment_method].presence, paid_at: paid_times[row[:id].to_s])
       end
       @split.apply_even_split if @split.even?
       valid_split = @split.valid?
+      # Cash counts, but a row nobody has connected has no way to be asked.
+      unconnected = @rows.any? { |row| row[:payment_method].blank? }
+      @split.errors.add(:base, "Connect everyone before saving") if unconnected
       people = @split.participants.map(&:person).compact.uniq
       valid_people = people.map do |person|
         person.valid?.tap do |valid|
           person.errors.full_messages.each { |message| @split.errors.add(:base, "#{person.name}: #{message}") } unless valid
         end
       end.all?
-      raise ActiveRecord::Rollback unless valid_split && valid_people
+      raise ActiveRecord::Rollback unless valid_split && valid_people && !unconnected
 
       people.each(&:save!)
       saved = @split.save

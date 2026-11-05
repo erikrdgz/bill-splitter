@@ -31,6 +31,29 @@
       Share requests
     </button>
     <p role="status" class="action-feedback" data-copy-logic-target="confirmation" data-copied-text="Message copied." hidden></p>
+    <%# Revealed by CopyLogic once the share actually happened. The recap is plain
+        server-rendered HTML, so Close is just a link home. %>
+    <section class="shared-screen" aria-labelledby="shared-heading" data-copy-logic-target="shared" hidden>
+      <%# pathLength="1" lets CSS draw each stroke with one dash value, whatever its real length. %>
+      <svg class="shared-check" viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="26" cy="26" r="23" pathLength="1"/>
+        <path d="m15 27 8 8 15-17" pathLength="1"/>
+      </svg>
+      <h2 id="shared-heading" tabindex="-1">Shared!</h2>
+      <p><%= @split.title %></p>
+      <dl class="shared-recap">
+        <div><dt>Total</dt><dd><%= money(@split.total_cents) %></dd></div>
+        <div><dt>Requested from</dt><dd><%= pluralize(outstanding.size, "person") %></dd></div>
+        <div><dt>Still owed</dt><dd><%= money(@split.owed_cents) %></dd></div>
+        <div><dt>You pay</dt><dd><%= money(@split.remaining_cents) %></dd></div>
+      </dl>
+      <ol class="shared-people">
+        <% outstanding.each do |participant| %>
+          <li><span><%= participant.display_name %></span><span><%= money(participant.amount_cents) %></span></li>
+        <% end %>
+      </ol>
+      <%= link_to "Close", root_path, class: "primary-button next-button shared-close" %>
+    </section>
     <details class="message-preview">
       <summary>View group message</summary>
       <textarea readonly rows="6" aria-label="Every request as one message" data-copy-logic-target="source" data-action="focus->copy-logic#selectAll"><%= payment_request_message(@split) %></textarea>

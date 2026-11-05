@@ -350,3 +350,45 @@ message fallback. Canceling the share sheet does not claim anything was sent. Ca
 an arrangement until explicitly marked paid. Cash App requests and Zelle expose a copyable
 contact and a short app instruction; unsupported Apple Pay and developer demo panels are
 not offered. These replace the earlier demonstration UI described above.
+
+### Calculation before contact selection — November 5, 2026
+
+The people stage shows the total, live per-person result, people count, and the
+large **Add person** button after the list. Even splits show an exact amount or an approximation when pennies
+differ. Custom allocations show their actual minimum–maximum range, with the organizer's
+remainder still available below the cards.
+
+Recent contacts live inside the selected participant's Connect drawer. Choosing a recent
+contact fills the drawer for that existing spot; only confirming connects them. It never
+adds a participant or changes an allocation. Cancel leaves the draft untouched. This
+supersedes the earlier draft recent-friend quick-add interaction. Search and inline creation
+remain available, and contacts already in other spots cannot be selected twice.
+
+Each draft card's identity/Connect area is a compact graphite button with a teal label,
+an adjacent plus affordance, and press motion. The amount has more space and visual weight. Unnamed spots have one Person label, without a duplicate numbered avatar. Connected cards show the person's portrait
+and payment method with an edit chevron. The amount remains a separate keypad action, and
+swipe removal and custom sliders continue to work throughout planning and connection.
+
+
+### Bill entry before the group — November 5, 2026
+
+The first screen is amount, inline numeric keypad, title, then **Split up**, in that order.
+The keypad blends into the page without a panel or key surfaces. There is no initial
+checkmark: a positive amount and nonblank title enable Split up. The keypad fades out as
+the group enters. No participant, contact, remainder, or request controls appear before this.
+
+The group keeps the total and title read-only above a divider. The edit control unlocks
+both on this same screen. Title editing restores its underline; tapping the amount opens
+the update keypad with an integrated checkmark and previews the total in place. Dismissal
+restores the original total. Done locks the details again, preserving people and allocations.
+
+The summary groups the count above the per-person amount on the left, with a compact graphite
+Split evenly button on the right. A single person shows only the count, avoiding a repeated
+bill total and an equal-split action with no effect.
+
+The group fills the available mobile viewport. Only its bounded people bucket scrolls;
+the bill, summary, and actions remain in place. Add person is a rounded rectangle in a dedicated
+row outside the bucket, above the persistent You pay area. Adding scrolls the bucket to the new
+card. Once a person is connected, Request split appears below You pay and opens the request
+screen without sending automatically. Removing the last connected person hides that action.
+Swipe removal, sliders, and each person's keypad and Connect drawer retain their behavior.

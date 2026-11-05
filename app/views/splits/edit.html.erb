@@ -1,69 +1,7 @@
 <% content_for :title, @split.title %>
-
-<div class="editor-heading screen-toolbar">
-  <h1 class="page-heading">Edit split</h1>
-  <%= link_to "Requests", split_path(@split), class: "toolbar-action" %>
-</div>
-<%= form_with model: @split, class: "editor-bill", id: "split_amounts" do |form| %>
-  <%= render "shared/errors", record: @split %>
-  <%= form.label :amount, "Total bill", class: "field-label" %>
-  <div class="amount-control" data-controller="amount-keypad-logic">
-  <div class="bill-amount">
-    <span aria-hidden="true">$</span>
-    <%= form.text_field :amount, inputmode: "decimal", autocomplete: "off", class: "amount-input", readonly: true, aria: { haspopup: "dialog" },
-      data: { amount_keypad_logic_target: "field", action: "click->amount-keypad-logic#open keydown->amount-keypad-logic#openKey" } %>
-  </div>
-  <%= render "shared/amount_keypad" %>
-  </div>
-  <%= form.label :title, "What was it for?", class: "sr-only" %>
-  <div class="line-field"><%= form.text_field :title, maxlength: 80, class: "title-input" %></div>
-  <%= form.submit "Save name and total", class: "details-save" %>
-<% end %>
-<%= render "splits/recent_friends", split: @split, people: @recent_people %>
-
-<%# data-controller sits on the section so SplitLogic can see the rows, the
-    remaining figure and the save button together. In even mode there are no
-    sliders for it to drive, and it simply has nothing to do. %>
-<section class="split-section"
-         data-controller="split-logic"
-         data-split-logic-total-cents-value="<%= @split.total_cents %>">
-  <div class="section-heading">
-    <h2 class="font-medium">Each person pays</h2>
-
-    <%# Two submit buttons in one form, each sending its own split_mode. %>
-    <%= form_with model: @split, class: "mode-switch", id: "split_mode" do |form| %>
-      <% Split.split_modes.each_key do |mode| %>
-        <%= form.button mode.titleize,
-                        name: "split[split_mode]",
-                        value: mode,
-                        aria: { pressed: @split.split_mode == mode } %>
-      <% end %>
-    <% end %>
-  </div>
-
-  <%= render "splits/participants", split: @split %>
-  <%= render "splits/remaining", split: @split %>
-
-  <%# The form attribute connects these controls to the bill form above, so a
-      corrected allocation also saves the total that caused a validation error. %>
-  <% if @split.custom? %>
-    <button type="button"
-            class="text-button mt-3"
-            data-split-logic-target="spread"
-            data-action="split-logic#spreadTheRest">
-      Spread the rest evenly
-    </button>
-
-    <%= submit_tag(@split.remaining_cents.negative? ? "#{money(-@split.remaining_cents)} over the bill" : "Save amounts",
-                   form: "split_amounts", disabled: @split.remaining_cents.negative?,
-                   data: { split_logic_target: "save" }, class: "secondary-button mt-2") %>
-  <% end %>
-
-  <%= button_to "Add a person", split_participants_path(@split),
-                disabled: @split.participants.size >= SplitMath::PEOPLE_RANGE.max,
-                class: "add-person", data: { split_logic_target: "add" } %>
-</section>
-
-<div class="editor-done">
-  <%= button_tag "Save and view requests", type: "submit", form: "split_amounts", name: "intent", value: "request", class: "primary-button" %>
-</div>
+<% content_for :page_class, "page--composer" %>
+<h1 class="sr-only">Edit split</h1>
+<%# Editing a saved split reopens the very same composer, already on the people
+    step, so there is one UI to learn and nothing that can drift out of step. %>
+<%= render "composer", split: @split, url: split_path(@split), method: :patch, people_count: @people_count,
+                       draft_rows: @draft_rows, restored: true %>

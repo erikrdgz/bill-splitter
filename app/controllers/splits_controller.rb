@@ -1,5 +1,5 @@
 class SplitsController < ApplicationController
-  before_action :set_quick_split_limits, only: %i[new create]
+  before_action :set_quick_split_limits, only: %i[new create edit update]
   before_action :set_recent_people, only: %i[new create edit update]
   before_action :set_split, only: %i[show edit update]
 
@@ -54,24 +54,27 @@ class SplitsController < ApplicationController
     @payment_profile = PaymentProfile.for_owner(owner_token)
   end
 
+  # The same composer as a new split, opened on the people step with this
+  # split's rows already in it. Each row carries its participant id so saving
+  # can keep who has already paid.
   def edit
+    @draft_rows = @split.participants.map { |participant| draft_row_for(participant) }
+    @people_count = @draft_rows.size
   end
 
-  # In even mode the amounts are the server's to work out, so whatever the form
-  # said about them is thrown away and SplitMath decides.
-  #
-  # In custom mode they are the organizer's own allocation, so they are taken as
-  # posted and only checked. The server still has the final say — it just says
-  # "no" rather than "here is what you meant". A split whose rows do not add up
-  # to its total is refused by the validation, which is the whole point of
-  # custom mode having a remaining figure to work down to zero.
+  # The composer submits the whole draft again, so an edit is "replace the rows
+  # with these" through the same SplitDraft a new split uses. One path means
+  # one set of rules about what a saved split may look like.
   def update
-    @split.assign_attributes(split_params)
-    @split.apply_even_split if @split.even?
+    rows = quick_split_params[:draft_rows]
+    @split.assign_attributes(title: quick_split_params[:title].presence || @split.title,
+                             amount: quick_split_params[:amount])
 
-    if @split.save
-      redirect_to params[:intent] == "request" ? split_path(@split) : edit_split_path(@split), notice: "Saved."
+    if rows.present? && SplitDraft.new(@split, rows).save
+      redirect_to split_path(@split), notice: "Saved."
     else
+      @draft_rows = Array(rows).map(&:to_h)
+      @people_count = @draft_rows.size
       render :edit, status: :unprocessable_entity
     end
   end
@@ -102,14 +105,7 @@ class SplitsController < ApplicationController
 
   def quick_split_params
     params.expect(split: [ :amount, :people_count, :title, { person_ids: [],
-      draft_rows: [ [ :person_id, :name, :payment_method, :phone_number, :amount_cents, :locked ] ] } ])
-  end
-
-  def split_params
-    params.expect(
-      split: [ :title, :amount, :split_mode,
-               { participants_attributes: [ [ :id, :amount_cents, :locked ] ] } ]
-    )
+      draft_rows: [ [ :id, :person_id, :name, :payment_method, :phone_number, :amount_cents, :locked ] ] } ])
   end
 
   # The quick split has no title field — naming the split is what the editor is
@@ -128,5 +124,13 @@ class SplitsController < ApplicationController
     safe_count = people_count.clamp(0, SplitMath::PEOPLE_RANGE.max + 1)
 
     safe_count.times { |index| @split.participants.build(position: index + 1) }
+  end
+
+  def draft_row_for(participant)
+    person = participant.person
+    { id: participant.id, person_id: person&.id, name: person&.name,
+      payment_method: participant.payment_method, phone_number: person&.display_phone_number,
+      portrait_index: (helpers.avatar_portrait_index(person) if person),
+      amount_cents: participant.amount_cents, locked: participant.locked? ? "1" : "0" }
   end
 end

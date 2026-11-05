@@ -12,7 +12,7 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
 
     assert_select "input[name=?]", "split[amount]"
     assert_select "input[name=?][type=hidden]", "split[people_count]"
-    assert_select "button", text: "Add"
+    assert_select "button", text: /Add person/
     assert_select "[data-quick-split-logic-target=countDisplay]", text: "0 people"
     assert_select "input[type=submit][value=?]", "Save split"
   end

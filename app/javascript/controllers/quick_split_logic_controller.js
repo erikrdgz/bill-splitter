@@ -6,9 +6,10 @@ import { addPortrait } from "avatar_portrait"
 // or reviewing requests submits the draft for server validation.
 export default class extends Controller {
   static targets = ["amount", "peopleCount", "countDisplay", "add", "shares",
-    "shareRowTemplate", "centNote", "friend", "remaining", "remainingLabel", "save", "review",
+    "shareRowTemplate", "centNote", "friend", "remaining", "remainingLabel", "save", "request", "next", "connectNote",
+    "reviewList", "reviewRemaining",
     "error", "dialog", "connectionName", "connectionPhone", "connectionAmount", "method",
-    "handleFields", "connectionError"]
+    "handleFields", "connectionError", "comparison", "comparisonAmount", "comparisonLabel", "connectionPerson"]
   static values = { minimumPeople: Number, maximumPeople: Number, maximumTotalCents: Number, draft: Array }
 
   connect() {
@@ -26,7 +27,12 @@ export default class extends Controller {
     this.#render()
   }
 
-  increment() { this.#step(1) }
+  increment() {
+    this.#step(1)
+    // Only the card bucket scrolls. Keep the new spot visible while Add and
+    // the bill controls remain anchored in the mobile viewport.
+    this.sharesTarget.scrollTo({ top: this.sharesTarget.scrollHeight, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" })
+  }
   #step(change) {
     this.peopleCountTarget.value = Math.min(this.maximumPeopleValue, Math.max(this.minimumPeopleValue, this.#count() + change))
     this.recalculate()
@@ -82,12 +88,10 @@ export default class extends Controller {
 
   chooseFriend(event) {
     const friend = event.currentTarget.dataset
-    if (this.rows.some(row => String(row.person_id) === friend.personId)) return
-    if (this.rows.length >= this.maximumPeopleValue) return
-    this.increment()
-    const row = this.rows.at(-1)
-    Object.assign(row, {person_id: friend.personId, name: friend.friendName, portrait_index: friend.portraitIndex})
-    this.#render()
+    this.connectionNameTarget.value = friend.friendName
+    this.dialogTarget.querySelector("[data-controller=contact-search-logic]").dispatchEvent(new Event("reset-contact-search"))
+    this.selectContact({detail: {id: friend.personId, name: friend.friendName,
+      portraitIndex: friend.portraitIndex, phoneNumber: friend.phoneNumber}})
   }
   openConnection(event) {
     this.connectionIndex = this.#index(event)
@@ -99,11 +103,13 @@ export default class extends Controller {
     this.connectionPhone = friend?.dataset.phoneNumber || ""
     this.connectionPortrait = row.portrait_index ?? friend?.dataset.portraitIndex
     this.methodTargets.forEach(input => { input.checked = input.value === (row.payment_method || "venmo") })
+    this.connectionPersonTarget.textContent = row.name || `Person ${this.connectionIndex + 1}`
     this.connectionAmountTarget.textContent = this.#money(row.amount_cents)
     this.connectionErrorTarget.hidden = true
     this.changeMethod()
     if (row.phone_number) this.connectionPhoneTarget.value = row.phone_number
     this.dialogTarget.querySelector("[data-controller=contact-search-logic]").dispatchEvent(new Event("reset-contact-search"))
+    this.#updateFriendChoices()
     openSheet(this.dialogTarget, {onDismiss: () => this.closeConnection()})
   }
   closeConnection(event) {
@@ -124,6 +130,7 @@ export default class extends Controller {
     this.connectionPhone = ""
     this.connectionPhoneTarget.value = ""
     this.connectionErrorTarget.hidden = true
+    this.#updateFriendChoices()
   }
   selectContact(event) {
     const contact = event.detail
@@ -131,7 +138,17 @@ export default class extends Controller {
     this.connectionPortrait = contact.portraitIndex
     this.connectionOriginalName = contact.name
     this.connectionPhone = contact.phoneNumber || ""
+    this.connectionErrorTarget.hidden = true
+    this.#updateFriendChoices()
     this.changeMethod()
+  }
+  #updateFriendChoices() {
+    this.friendTargets.forEach(button => {
+      const selected = String(this.connectionPersonId) === button.dataset.personId
+      button.disabled = this.rows.some((row, index) => index !== this.connectionIndex && String(row.person_id) === button.dataset.personId)
+      button.classList.toggle("is-connected", selected)
+      button.setAttribute("aria-pressed", String(selected))
+    })
   }
   changeMethod() {
     const method = this.methodTargets.find(input => input.checked).value
@@ -162,6 +179,7 @@ export default class extends Controller {
       person_id: name === this.connectionOriginalName ? this.connectionPersonId : ""})
     await this.closeConnection()
     this.#render()
+    this.sharesTarget.children[this.connectionIndex]?.scrollIntoView({ block: "nearest", behavior: "instant" })
   }
   prepareSubmit(event) {
     if (!this.rows.length || !this.total || this.total < this.rows.length || this.#remaining() < 0) {
@@ -174,6 +192,7 @@ export default class extends Controller {
   #money(cents) { return `$${Math.floor(cents / 100).toLocaleString("en-US")}${cents % 100 ? `.${String(cents % 100).padStart(2, "0")}` : ""}` }
 
   #render() {
+    this.element.dataset.hasPeople = String(this.rows.length > 0)
     while (this.sharesTarget.children.length < this.rows.length) this.sharesTarget.append(this.shareRowTemplateTarget.content.cloneNode(true))
     Array.from(this.sharesTarget.children).slice(this.rows.length).forEach(element => element.remove())
     // One fixed scale for the whole draft, including a rejected lowered total.
@@ -189,9 +208,11 @@ export default class extends Controller {
       amountField.value = row.amount_cents / 100
       amountField.dataset.personName = name
       amountField.dataset.maxCents = Math.max(0, this.#remaining() + row.amount_cents)
-      element.querySelector("[data-share-row-connection]").textContent = row.payment_method ? {venmo:"Venmo", cash_app:"Cash App", cash:"Cash"}[row.payment_method] : "Connect +"
+      element.querySelector("[data-share-row-connection]").textContent = row.payment_method ? {venmo:"Venmo", cash_app:"Cash App", cash:"Cash"}[row.payment_method] : "Connect"
       element.querySelector(".draft-connect").setAttribute("aria-label", `Connect ${name}`)
+      element.querySelector(".draft-connect").dataset.connected = String(Boolean(row.name))
       const avatar = element.querySelector("[data-share-row-avatar]")
+      avatar.hidden = !row.name
       const words = name.split(/\s+/)
       const tone = Array.from(name).reduce((sum, character) => sum + character.codePointAt(0), 0) % 5
       avatar.className = `avatar avatar--small ${row.name ? `avatar--${tone}` : "avatar--placeholder"}`
@@ -227,14 +248,47 @@ export default class extends Controller {
     this.remainingTarget.parentElement.dataset.over = String(remaining < 0)
     this.countDisplayTarget.textContent = `${this.rows.length} ${this.rows.length === 1 ? "person" : "people"}`
     this.addTarget.disabled = this.rows.length >= this.maximumPeopleValue
-    this.saveTarget.disabled = this.reviewTarget.disabled = !this.rows.length || remaining < 0
-    this.reviewTarget.hidden = !this.rows.some(row => row.payment_method)
+    // Nobody can be asked for money until we know how they will pay, and cash
+    // counts: an unconnected person simply needs to be set to cash.
+    const everyoneConnected = this.rows.length > 0 && this.rows.every(row => row.payment_method)
+    this.nextTarget.disabled = !everyoneConnected || remaining < 0 || !this.total
+    this.connectNoteTarget.hidden = !this.rows.length || everyoneConnected
+    this.saveTarget.disabled = this.requestTarget.disabled = this.nextTarget.disabled
+    this.#renderReview(remaining)
     this.errorTarget.hidden = true
     this.centNoteTarget.hidden = !this.rows.length || this.custom || !this.total || this.total % this.rows.length === 0
     this.centNoteTarget.textContent = "Includes a 1¢ rounding adjustment."
-    this.friendTargets.forEach(button => {
-      button.disabled = this.rows.some(row => String(row.person_id) === button.dataset.personId)
-      button.classList.toggle("is-connected", button.disabled)
-    })
+    this.#renderComparison()
+  }
+
+  #renderReview(remaining) {
+    const methods = {venmo: "Venmo", cash_app: "Cash App", cash: "Cash"}
+    this.reviewListTarget.replaceChildren(...this.rows.map((row, index) => {
+      const item = document.createElement("li")
+      const who = document.createElement("span")
+      const name = document.createElement("strong")
+      name.textContent = row.name || `Person ${index + 1}`
+      const method = document.createElement("small")
+      method.textContent = methods[row.payment_method] || ""
+      who.append(name, method)
+      const amount = document.createElement("span")
+      amount.textContent = this.#money(row.amount_cents)
+      item.append(who, amount)
+      return item
+    }))
+    this.reviewRemainingTarget.textContent = this.total ? this.#money(Math.abs(remaining)) : "—"
+  }
+
+  #renderComparison() {
+    this.comparisonTarget.hidden = this.rows.length < 2 || !this.total
+    if (this.comparisonTarget.hidden) return
+    const amounts = this.rows.map(row => row.amount_cents)
+    const minimum = Math.min(...amounts)
+    const maximum = Math.max(...amounts)
+    const roundedEven = !this.custom && minimum !== maximum
+    this.comparisonAmountTarget.textContent = roundedEven ? `≈${this.#money(Math.round(this.total / this.rows.length))}` :
+      minimum === maximum ? this.#money(minimum) : `${this.#money(minimum)}–${this.#money(maximum)}`
+    this.comparisonLabelTarget.textContent = minimum === maximum || roundedEven ? "each" : "per person"
+    this.comparisonTarget.dataset.range = String(minimum !== maximum && !roundedEven)
   }
 }

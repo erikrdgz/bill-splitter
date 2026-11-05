@@ -3,9 +3,14 @@ require "application_system_test_case"
 class FriendPortraitsTest < ApplicationSystemTestCase
   test "sample portraits follow a friend from recents through a saved split" do
     open_sample_contacts
-    assert_selector ".friend-list .avatar-photo", count: 8
+    assert_no_text "Recent friends"
     enter_bill_amount("100")
-    click_on "Add Maya Chen"
+    start_group
+    click_on "Add person", exact: true
+    click_on "Connect Person 1"
+    assert_selector ".friend-list .avatar-photo", count: 8
+    click_on "Choose Maya Chen"
+    click_on "Connect", exact: true
     assert_selector "[data-share-row-avatar] .avatar-photo", count: 1
     click_on "Save split"
     assert_selector "#requests .avatar-photo", count: 1
@@ -15,6 +20,9 @@ class FriendPortraitsTest < ApplicationSystemTestCase
 
   test "the next friend peeks in and the fade clears at the end" do
     open_sample_contacts
+    start_group
+    click_on "Add person", exact: true
+    click_on "Connect Person 1"
     assert_selector ".friend-list[data-more-right=true][data-more-left=false]"
     assert page.evaluate_script(<<~JS)
       (() => {
@@ -23,15 +31,17 @@ class FriendPortraitsTest < ApplicationSystemTestCase
         return next.left < strip.right && next.right > strip.right
       })()
     JS
-    click_on "Add Alex Rivera"
-    click_on "Add Maya Chen"
+    click_on "Choose Alex Rivera"
+    click_on "Choose Maya Chen"
     assert_selector ".friend-list[data-more-right=false][data-more-left=true]"
-    assert_selector "[data-share-row-avatar] .avatar-photo", count: 2
+    click_on "Connect", exact: true
+    assert_selector "[data-share-row-avatar] .avatar-photo", count: 1
   end
 
   test "contact search uses the portrait and new contacts retain initials" do
     open_sample_contacts
-    click_on "Add", exact: true
+    start_group
+    click_on "Add person", exact: true
     click_on "Connect Person 1"
     fill_in "Name", with: "Maya"
     assert_selector "[role=option] .avatar-photo", count: 1
@@ -39,7 +49,8 @@ class FriendPortraitsTest < ApplicationSystemTestCase
     choose "Cash", allow_label_click: true
     click_on "Connect", exact: true
     assert_selector "[data-share-row-avatar] .avatar-photo", count: 1
-    click_on "Add", exact: true
+    start_group
+    click_on "Add person", exact: true
     click_on "Connect Person 2"
     fill_in "Name", with: "Robin Green"
     find("[role=option]", text: "Create contact “Robin Green”").click
@@ -47,6 +58,26 @@ class FriendPortraitsTest < ApplicationSystemTestCase
     click_on "Connect", exact: true
     assert_selector "[data-share-row-avatar]", text: "RG"
     assert_selector "[data-share-row-avatar] .avatar-photo", count: 1
+  end
+
+  test "canceling a recent choice keeps the spot and confirmed contacts cannot be duplicated" do
+    open_sample_contacts
+    enter_bill_amount("3000")
+    set_people_count(6)
+    click_on "Connect Person 1"
+    click_on "Choose Maya Chen"
+    click_on "Close connection"
+    assert_button "Connect Person 1"
+    assert_selector "[data-quick-split-logic-target=countDisplay]", text: "6 people"
+    assert_selector "[data-quick-split-logic-target=comparison]", text: /\$500\s+each/
+    click_on "Connect Person 1"
+    click_on "Choose Maya Chen"
+    click_on "Connect", exact: true
+    assert_button "Connect Maya Chen"
+    assert_selector "[data-quick-split-logic-target=countDisplay]", text: "6 people"
+    click_on "Connect Person 2"
+    assert_button "Choose Maya Chen", disabled: true
+    click_on "Close connection"
   end
 
   private

@@ -9,7 +9,7 @@ class SplitEditorsTest < ApplicationSystemTestCase
     save_split_and_open_editor
 
     assert_selector "h1", text: "Edit split"
-    assert_field "What was it for?", with: "Split on #{Date.current.strftime('%B %-d')}"
+    assert_field "What was it for?", with: "Dinner"
     assert_field "Total bill", with: "100.00"
     assert_row_amounts [ "$33.34", "$33.33", "$33.33" ]
     assert_text "You pay\n$0.00"

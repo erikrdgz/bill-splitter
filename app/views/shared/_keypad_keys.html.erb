@@ -1,0 +1,8 @@
+<%# The twelve keys, shared by the inline bill keypad and the amount dialogs so a
+    key can never sit in a different place on one screen than on another. %>
+<% (1..9).each do |digit| %>
+  <button type="button" data-key="<%= digit %>" data-action="amount-keypad-logic#press"><%= digit %></button>
+<% end %>
+<button type="button" aria-label="Decimal point" data-key="." data-action="amount-keypad-logic#press">.</button>
+<button type="button" data-key="0" data-action="amount-keypad-logic#press">0</button>
+<button type="button" class="entry-backspace" aria-label="Backspace" data-action="amount-keypad-logic#erase">⌫</button>

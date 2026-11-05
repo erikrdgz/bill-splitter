@@ -31,21 +31,37 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   end
 
   def enter_bill_amount(amount, label: "Amount")
+    find_field(label)
+    group = has_selector?(".composer[data-stage=group]", wait: 0)
+    inline = has_selector?(".composer[data-stage=details]", wait: 0)
+    click_on "Edit bill details" if group && has_button?("Edit bill details", wait: 0)
     find_field(label).click
-    within "dialog[open][aria-label='Enter bill amount']" do
+    within(inline ? ".entry-keypad" : "dialog[open][aria-label='Enter bill amount']") do
       click_on "Clear", exact: true
       amount.to_s.each_char do |digit|
         next unless digit.match?(/[0-9.]/)
         click_on(digit == "." ? "Decimal point" : digit, exact: true)
       end
-      click_on "Set amount"
+      click_on "Set amount" unless inline
+      click_on "Accept amount" if inline && has_button?("Accept amount", wait: 0)
     end
+    click_on "Done editing bill" if group
+  end
+
+  def start_group
+    return if has_selector?(".composer[data-stage=group]", wait: 0)
+
+    enter_bill_amount("100") if find_field("Amount").value.to_f <= 0
+    fill_in "What's this for?", with: "Dinner" if find_field("What's this for?").value.blank?
+    click_on "Split up"
+    assert_selector ".composer[data-stage=group]"
   end
 
   def set_people_count(count)
+    start_group
     count = count.to_i
     current = find("input[data-quick-split-logic-target=peopleCount]", visible: :all).value.to_i
-    (count - current).times { click_on "Add", exact: true } if count > current
+    (count - current).times { click_on "Add person", exact: true } if count > current
     (current - count).times do
       all("[data-quick-split-logic-target=shares] > li").last.send_keys(:delete)
     end if count < current

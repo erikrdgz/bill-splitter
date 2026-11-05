@@ -1006,3 +1006,46 @@ UI. No third-party avatar requests or real-person images are needed.
 Recent friends fit four full items and part of the fifth. A small Stimulus controller
 observes scrolling and resizing so the edge fade appears only when content remains in
 that direction. The list remains a native horizontal scroller with keyboard focus.
+
+## Compare headcounts before choosing contacts
+
+The draft's Add person action changes headcount; Connect assigns an existing spot. Moving
+recents into the drawer gives these actions distinct meanings. Selecting a recent contact
+only updates drawer state until confirmation, so canceling cannot alter people or amounts.
+The live comparison reads the same cents used by the cards; custom shares show a range
+instead of presenting a misleading equal-share estimate. The people bucket keeps Add after its cards, allowing the list to grow while keeping
+the control reachable near the viewport edge.
+
+
+## Bill entry and group building share one draft
+
+The first stage orders the total, a surface-free inline keypad, title, and Split up.
+It has no separate amount confirmation. The second stage locks those bill details and
+reveals the people bucket. Editing unlocks the title and amount in place; the update keypad
+has a checkmark and previews changes in the existing total. No return to bill entry is needed.
+SplitFlowLogic controls stages and available mobile height; QuickSplitLogic remains responsible
+for allocation and connection. No stage transition saves or sends anything.
+
+Only the people bucket scrolls. A dedicated row holds the rounded-rectangle Add button above
+the persistent remainder and request area. This keeps group size from extending the whole
+page. The summary groups count and per-person amount, with a quieter Split evenly button;
+for one person, only the count is needed. Request split appears after a connection and opens
+the existing request screen. The single form preserves the draft and server validation flow
+without introducing intermediate records.
+
+## Editing a saved split reopens the composer
+
+Edit used to be a separate screen (recent friends, Even/Custom toggle, per-row lock) that
+drifted from the new-split UI. It now renders the same `_composer` partial, already on the
+people step, with the saved rows as the draft. `update` replaces the rows through SplitDraft,
+the same path as `create`, so there is one set of rules. A row carries its participant id so
+`paid_at` survives an edit. The lock is now only data (any hand-set amount marks a split
+custom); nothing in the UI shows it.
+
+## Review step owns Save and Request; everyone must be connected
+
+Add person is one full-width button that never moves. Next is disabled until every person is
+connected (cash counts, so there is no Venmo or Cash App requirement), then opens a review
+step that holds Save split and Request split. SplitDraft refuses unconnected rows too, so a
+forged request cannot skip the rule. The keypad keys live in one partial shared by the inline
+keypad and the amount dialogs, so the layouts cannot drift apart.

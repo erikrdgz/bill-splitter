@@ -101,22 +101,26 @@ class PeoplePickersTest < ApplicationSystemTestCase
     assert_selector "button[aria-label='Remove Person 1'][disabled]", visible: :all
   end
 
-  test "a recent friend can be selected before connecting a new split" do
+  test "a recent friend fills the selected seat without increasing the group" do
     open_editor_for "100", 2
     save_name_on_row "Name Person 1", "Alex Rivera"
     within "#recent_friends" do
       assert_button "Alex Rivera is connected", disabled: true
     end
     click_on "New split"
-    2.times { click_on "Add", exact: true }
-    click_on "Add Alex Rivera"
     enter_bill_amount("90")
     fill_in "What's this for?", with: "Dinner"
+    start_group
+    2.times { click_on "Add person", exact: true }
+    click_on "Connect Person 2"
+    click_on "Choose Alex Rivera"
+    choose "Cash", allow_label_click: true
+    click_on "Connect", exact: true
     assert_selector "[data-share-row-name]", text: "Alex Rivera"
     save_split_and_open_editor
     assert_link "Name Alex Rivera"
     assert_field "What was it for?", with: "Dinner"
-    assert_row_amounts [ "$30.00", "$30.00", "$30.00" ]
+    assert_row_amounts [ "$45.00", "$45.00" ]
   end
 
   test "recent quick add appends a seat and preserves unsaved custom amounts" do

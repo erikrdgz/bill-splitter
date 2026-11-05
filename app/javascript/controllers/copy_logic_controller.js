@@ -11,13 +11,14 @@ import { Controller } from "@hotwired/stimulus"
 // older browser — it can still be copied by hand. This controller is a
 // convenience on top of something that already works.
 export default class extends Controller {
-  static targets = [ "source", "confirmation" ]
+  static targets = [ "source", "confirmation", "shared" ]
 
   async copy() {
     this.sourceTarget.closest("details")?.setAttribute("open", "")
     this.sourceTarget.select()
 
-    if (await this.#copied()) {
+    const copied = await this.#copied()
+    if (copied) {
       this.confirmationTarget.textContent = this.confirmationTarget.dataset.copiedText || "Copied."
     } else {
       // Never claim a copy that did not happen. The text is selected, so
@@ -26,18 +27,21 @@ export default class extends Controller {
     }
 
     this.confirmationTarget.hidden = false
+    return copied
   }
 
+  // No system share sheet: the organizer sends each request from its own Text
+  // button, so this just puts the group message on the clipboard (best effort)
+  // and moves on to the recap.
   async share() {
-    if (navigator.share) {
-      try {
-        await navigator.share({ text: this.sourceTarget.value })
-        return
-      } catch (error) {
-        if (error.name === "AbortError") return
-      }
-    }
-    await this.copy()
+    await this.#copied()
+    this.#showShared()
+  }
+
+  #showShared() {
+    if (!this.hasSharedTarget) return
+    this.sharedTarget.hidden = false
+    this.sharedTarget.querySelector("h2").focus()
   }
 
   // Selecting on focus means tapping the field is enough to copy by hand.
