@@ -1,13 +1,13 @@
 <section id="recent_friends" class="recent-section" aria-label="Recent friends">
   <h2>Recent friends</h2>
   <% if people.any? %>
-    <div class="friend-list">
+    <div class="friend-list" data-controller="friend-strip-logic" data-action="scroll->friend-strip-logic#update" tabindex="0" aria-label="Recent friends, scroll for more">
       <% people.each do |person| %>
         <% connected = split.participants.any? { |participant| participant.person_id == person.id } %>
         <%= button_to split_participants_path(split), params: { person_id: person.id },
           class: "friend-choice #{'is-connected' if connected}", disabled: connected,
           aria: { label: connected ? "#{person.name} is connected" : "Connect #{person.name}" }, title: person.name do %>
-          <%= render "shared/avatar", name: person.name %>
+          <%= render "shared/avatar", person: person, name: person.name %>
           <span class="friend-name"><%= person.name %></span>
           <% if connected %><span class="friend-state">Connected</span><% end %>
         <% end %>

@@ -995,3 +995,14 @@ replacing one frame, because every request button above depends on them.
 
 **Fake data.** The dev contacts get 555-01xx numbers (reserved for fiction) and the organizer gets
 fake `erik-r` / `erikr` handles, so the whole flow can be clicked through without texting anyone.
+
+## Friend portraits and horizontal-list discovery
+
+The eight fictional preview contacts use a bundled, generated portrait atlas. Matching
+requires the seeded name and reserved fictional phone number; ordinary contacts retain
+initials. The same portrait index is used by server-rendered avatars and the draft/search
+UI. No third-party avatar requests or real-person images are needed.
+
+Recent friends fit four full items and part of the fifth. A small Stimulus controller
+observes scrolling and resizing so the edge fade appears only when content remains in
+that direction. The list remains a native horizontal scroller with keyboard focus.

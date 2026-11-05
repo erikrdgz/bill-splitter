@@ -10,7 +10,7 @@
 <li id="<%= dom_id(participant) %>" class="participant-card payment-card">
   <div class="flex items-baseline justify-between gap-3">
     <span class="payment-name <%= "text-muted" if participant.paid? %>">
-      <%= render "shared/avatar", name: participant.display_name, small: true %>
+      <%= render "shared/avatar", person: participant.person, name: participant.display_name, small: true %>
       <%= participant.display_name %>
     </span>
 

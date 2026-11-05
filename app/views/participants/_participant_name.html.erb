@@ -1,7 +1,7 @@
 <turbo-frame id="<%= dom_id(participant, :name) %>" class="block">
   <%= link_to people_path(participant_id: participant.id), class: "participant-name-link",
     aria: { label: "Name #{participant.display_name}" } do %>
-    <%= render "shared/avatar", name: participant.display_name, small: true %>
+    <%= render "shared/avatar", person: participant.person, name: participant.display_name, small: true %>
     <span><span data-person-name><%= participant.display_name %></span><% unless participant.person %><span class="connect-label">Connect +</span><% end %></span>
   <% end %>
 </turbo-frame>

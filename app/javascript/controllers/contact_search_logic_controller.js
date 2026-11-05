@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { addPortrait } from "avatar_portrait"
 
 export default class extends Controller {
   static targets = ["input", "results", "status"]
@@ -56,6 +57,7 @@ export default class extends Controller {
     avatar.setAttribute("aria-hidden", "true")
     const words = contact.name.split(/\s+/)
     avatar.textContent = create ? "+" : [words[0], words.length > 1 ? words.at(-1) : ""].map(word => word[0] || "").join("").toUpperCase()
+    if (!create) addPortrait(avatar, contact.portraitIndex)
     const name = document.createElement("span")
     name.textContent = label
     button.append(avatar, name)

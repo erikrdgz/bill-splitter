@@ -21,7 +21,7 @@ class PeopleController < ApplicationController
   def search
     query = params[:query].to_s.strip.first(40)
     people = query.present? ? Person.owned_by(owner_token).matching(query).by_name.limit(20) : []
-    render json: people.map { |person| { id: person.id, name: person.name, phoneNumber: person.phone_number } }
+    render json: people.map { |person| { id: person.id, name: person.name, phoneNumber: person.phone_number, portraitIndex: helpers.avatar_portrait_index(person) } }
   end
 
   # "Add [name] as a new person": saves the name for next time and puts it on

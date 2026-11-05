@@ -3,7 +3,7 @@
     data: { turbo_frame: dom_id(participant, :name) } do |form| %>
     <%= form.hidden_field "participant[person_id]", value: person.id %>
     <%= form.button class: "picker-result", aria: { label: person.name } do %>
-      <%= render "shared/avatar", name: person.name, small: true %>
+      <%= render "shared/avatar", person: person, name: person.name, small: true %>
       <span><%= person.name %></span>
     <% end %>
   <% end %>

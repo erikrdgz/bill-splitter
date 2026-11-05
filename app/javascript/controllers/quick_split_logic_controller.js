@@ -1,5 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 import { openSheet, closeSheet } from "sheet_motion"
+import { addPortrait } from "avatar_portrait"
 
 // The calculator stays entirely local. Connecting prepares a row; only saving
 // or reviewing requests submits the draft for server validation.
@@ -85,7 +86,7 @@ export default class extends Controller {
     if (this.rows.length >= this.maximumPeopleValue) return
     this.increment()
     const row = this.rows.at(-1)
-    Object.assign(row, {person_id: friend.personId, name: friend.friendName})
+    Object.assign(row, {person_id: friend.personId, name: friend.friendName, portrait_index: friend.portraitIndex})
     this.#render()
   }
   openConnection(event) {
@@ -96,6 +97,7 @@ export default class extends Controller {
     this.connectionOriginalName = row.name || ""
     const friend = this.friendTargets.find(button => button.dataset.personId === String(row.person_id))
     this.connectionPhone = friend?.dataset.phoneNumber || ""
+    this.connectionPortrait = row.portrait_index ?? friend?.dataset.portraitIndex
     this.methodTargets.forEach(input => { input.checked = input.value === (row.payment_method || "venmo") })
     this.connectionAmountTarget.textContent = this.#money(row.amount_cents)
     this.connectionErrorTarget.hidden = true
@@ -117,6 +119,7 @@ export default class extends Controller {
   }
   editContact() {
     this.connectionPersonId = ""
+    this.connectionPortrait = null
     this.connectionOriginalName = ""
     this.connectionPhone = ""
     this.connectionPhoneTarget.value = ""
@@ -125,6 +128,7 @@ export default class extends Controller {
   selectContact(event) {
     const contact = event.detail
     this.connectionPersonId = contact.id
+    this.connectionPortrait = contact.portraitIndex
     this.connectionOriginalName = contact.name
     this.connectionPhone = contact.phoneNumber || ""
     this.changeMethod()
@@ -154,7 +158,7 @@ export default class extends Controller {
       this.connectionErrorTarget.hidden = false
       return
     }
-    Object.assign(this.rows[this.connectionIndex], {name, payment_method, phone_number,
+    Object.assign(this.rows[this.connectionIndex], {name, payment_method, phone_number, portrait_index: this.connectionPortrait,
       person_id: name === this.connectionOriginalName ? this.connectionPersonId : ""})
     await this.closeConnection()
     this.#render()
@@ -192,6 +196,8 @@ export default class extends Controller {
       const tone = Array.from(name).reduce((sum, character) => sum + character.codePointAt(0), 0) % 5
       avatar.className = `avatar avatar--small ${row.name ? `avatar--${tone}` : "avatar--placeholder"}`
       avatar.textContent = row.name ? [words[0], words.length > 1 ? words.at(-1) : ""].map(word => word[0] || "").join("").toUpperCase() : index + 1
+      const friend = this.friendTargets.find(button => button.dataset.personId === String(row.person_id))
+      addPortrait(avatar, row.portrait_index ?? friend?.dataset.portraitIndex)
       const slider = element.querySelector("[data-share-row-slider]")
       slider.max = maximum
       slider.value = row.amount_cents

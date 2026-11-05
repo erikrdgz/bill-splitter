@@ -436,3 +436,16 @@
     .payment-action:active, .toolbar-action:active, .soft-button:active { transform: scale(.98); }
   }
 }
+
+@layer components {
+  .avatar { position: relative; }
+  .avatar-photo { position: absolute; inset: 0; border-radius: inherit; background-image: url("avatars/contact-portraits.png"); background-size: 400% 200%; background-repeat: no-repeat; }
+  /* Four complete friends and a glimpse of the fifth at every phone width. */
+  .friend-list { gap: 12px; padding: 16px 4px 10px; scroll-padding-inline: 4px; }
+  .friend-list > * { flex: 0 0 calc((100% - 52px) / 4.5); min-width: 0; }
+  .friend-list .friend-choice { width: 100%; }
+  .friend-list .friend-name { text-wrap: balance; }
+  .friend-list { --fade-left: 0px; --fade-right: 0px; mask-image: linear-gradient(to right, transparent, black var(--fade-left), black calc(100% - var(--fade-right)), transparent); }
+  .friend-list[data-more-left=true] { --fade-left: 24px; }
+  .friend-list[data-more-right=true] { --fade-right: 36px; }
+}

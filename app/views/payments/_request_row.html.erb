@@ -4,7 +4,7 @@
 <% text = PaymentText.new(participant: participant, split: split, payment_profile: payment_profile) %>
 <li id="<%= dom_id(participant, :request) %>" class="request-card">
   <div class="request-person">
-    <%= render "shared/avatar", name: participant.display_name, small: true %>
+    <%= render "shared/avatar", person: participant.person, name: participant.display_name, small: true %>
     <span class="request-name"><%= participant.display_name %></span>
     <strong class="request-amount"><%= money(participant.amount_cents) %></strong>
   </div>
