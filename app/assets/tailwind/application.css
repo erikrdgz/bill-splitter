@@ -30,7 +30,7 @@
   .app-shell { max-width: 1040px; margin: auto; padding: 0 40px; }
   .app-header { display: flex; align-items: center; justify-content: space-between; padding: 32px 0; }
   .wordmark { font-size: 34px; letter-spacing: -2px; font-weight: 500; line-height: 1; }
-  .wordmark-half > span { color: var(--color-accent); font-weight: 700; }
+  .wordmark-art > span { color: var(--color-accent); font-weight: 700; }
   .app-header nav { display: flex; align-items: center; gap: 16px; font-size: 13px; color: var(--color-muted); }
   .app-header nav a { display: inline-flex; align-items: center; gap: 7px; padding: 10px 0; }
   .app-header nav svg { width: 17px; height: 17px; flex-shrink: 0; }
@@ -650,32 +650,25 @@
   @keyframes draw-stroke { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
 }
 
-/* The split logo. Two copies of the word, each clipped to one half and nudged
-   apart; a canvas-coloured line is drawn across the cut. --split is how far
-   each half moves, in em so it scales with the logo. */
+/* The logo: "$plit" with a gap cut through it. The band is the page colour, so
+   it is invisible on the black surface and only shows as a break in the
+   letters, like a strike-through you cannot see. */
 @layer components {
-  .wordmark-art { --split: .045em; --cut: 54%; position: relative; display: inline-block; white-space: nowrap; }
-  .wordmark-half { display: block; }
-  .wordmark-half--top { clip-path: inset(-20% -20% calc(100% - var(--cut)) -20%); translate: calc(var(--split) * -1) 0; }
-  .wordmark-half--bottom { position: absolute; inset: 0; clip-path: inset(var(--cut) -20% -20% -20%); translate: var(--split) 0; }
-  .wordmark-art::after { content: ""; position: absolute; left: -.08em; right: -.08em; top: calc(var(--cut) - .02em); height: .04em; min-height: 1.5px; background: var(--color-canvas); }
+  .wordmark-art { --cut: 54%; position: relative; display: inline-block; white-space: nowrap; }
+  .wordmark-art::after { content: ""; position: absolute; left: -.08em; right: -.08em; top: calc(var(--cut) - .035em); height: .07em; min-height: 2px; background: var(--color-canvas); }
 
-  /* Plays once per session. Beats, in order: the logo fades in, the line is
-     drawn across it, the halves part, the overlay fades out. */
+  /* Plays once per session. Beats, in order: the logo fades in, the cut is
+     drawn across it left to right, the overlay fades out. */
   .intro { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: var(--color-canvas); pointer-events: none; }
-  .intro .wordmark-art { --split: .06em; font-size: clamp(72px, 22vw, 128px); font-weight: 500; letter-spacing: -.06em; line-height: 1; }
+  .intro .wordmark-art { font-size: clamp(72px, 22vw, 128px); font-weight: 500; letter-spacing: -.06em; line-height: 1; }
   @media (prefers-reduced-motion: reduce) { .intro { display: none; } }
   @media (prefers-reduced-motion: no-preference) {
-    .intro { animation: intro-out 600ms ease 2100ms forwards; }
+    .intro { animation: intro-out 600ms ease 1900ms forwards; }
     .intro .wordmark-art { animation: intro-logo-in 600ms ease both; }
-    .intro .wordmark-art::after { transform-origin: center; animation: intro-cut 420ms cubic-bezier(.65, 0, .35, 1) 800ms both; }
-    .intro .wordmark-half--top { animation: intro-part-top 520ms cubic-bezier(.22, 1, .36, 1) 1250ms both; }
-    .intro .wordmark-half--bottom { animation: intro-part-bottom 520ms cubic-bezier(.22, 1, .36, 1) 1250ms both; }
+    .intro .wordmark-art::after { transform-origin: left center; animation: intro-cut 480ms cubic-bezier(.65, 0, .35, 1) 900ms both; }
   }
   @keyframes intro-logo-in { from { opacity: 0; scale: .96; } to { opacity: 1; scale: 1; } }
   @keyframes intro-cut { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-  @keyframes intro-part-top { from { translate: 0 0; } to { translate: calc(var(--split) * -1) 0; } }
-  @keyframes intro-part-bottom { from { translate: 0 0; } to { translate: var(--split) 0; } }
   @keyframes intro-out { to { opacity: 0; visibility: hidden; } }
 }
 

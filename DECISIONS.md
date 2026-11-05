@@ -1141,13 +1141,15 @@ message had no way to reach "I paid". `PaymentText` now takes the share URL and 
 URL is passed in from the view instead of built in the model, because building a URL needs the
 request's host and a plain Ruby model should not reach for the request.
 
-## The logo is "$plit", split in two, and it moves in plain CSS
+## The logo is "$plit" with a gap cut through it, and it moves in plain CSS
 
-The trailing period is gone: "$plit" is the brand. The nav logo and the opening animation share one
-partial (`shared/_wordmark`) that draws the word twice, clips one copy to its top half and the other
-to its bottom half, and nudges them apart with a line across the cut. Live text rather than an SVG
-or PNG keeps it in the app's font, lets it scale with `em`, and means the nav and the intro cannot
-drift apart.
+The trailing period is gone: "$plit" is the brand. A band in the page colour is drawn across the
+middle of the word, so on the black surface it reads as a break in the letters rather than a visible
+line. The nav logo and the opening animation share one partial (`shared/_wordmark`). Live text
+rather than an SVG or PNG keeps it in the app's font and lets it scale with `em`.
+
+An earlier version cut the word in two and shifted the halves sideways. It did not read well, so the
+halves, the clipping and the doubled text were removed.
 
 **No animation gem.** Motion here is CSS keyframes and transitions, plus the Web Animations API
 that the bottom sheets already use. Rails has no idiomatic "motion gem", and the JS libraries

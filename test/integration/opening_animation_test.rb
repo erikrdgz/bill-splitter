@@ -28,14 +28,13 @@ class OpeningAnimationTest < ActionDispatch::IntegrationTest
     assert_select ".intro", 0
   end
 
-  test "the nav logo is the split wordmark, named for the app, without a period" do
+  test "the nav logo is the cut wordmark, named for the app, without a period" do
     Rails.configuration.x.intro = false # the intro draws a second copy of the logo
     get root_url
 
     assert_select "a.wordmark[aria-label='Bill Splitter']" do
-      assert_select ".wordmark-half", 2
+      assert_select ".wordmark-art", text: "$plit"
     end
-    assert_select ".wordmark-half", text: "$plit", count: 2
-    assert_select ".wordmark-half", text: /plit\./, count: 0
+    assert_select ".wordmark-art", text: /plit\./, count: 0
   end
 end

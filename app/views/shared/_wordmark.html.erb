@@ -1,10 +1,7 @@
-<%# The brand: "$plit", drawn twice and cut across the middle. The top copy is
-    clipped to its upper half and the bottom copy to its lower half, then each is
-    nudged sideways in CSS, so the logo is literally split. Two copies of live
-    text (rather than an image) keep it in the app's font and let the nav and
-    the intro share one definition. Both copies are hidden from screen readers;
-    the link or overlay that holds this names the app. %>
-<span class="wordmark-art" aria-hidden="true">
-  <span class="wordmark-half wordmark-half--top"><span>$</span>plit</span>
-  <span class="wordmark-half wordmark-half--bottom"><span>$</span>plit</span>
-</span>
+<%# The brand: "$plit" with a gap cut through it. The cut is a band in the page
+    colour drawn over the text in CSS (.wordmark-art::after), so on the black
+    surface it reads as a break in the letters rather than a visible line.
+    Live text keeps it in the app's font and lets nav and intro share one
+    definition. It is hidden from screen readers; whatever holds it names the
+    app. %>
+<span class="wordmark-art" aria-hidden="true"><span>$</span>plit</span>
