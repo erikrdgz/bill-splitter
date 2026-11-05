@@ -33,11 +33,49 @@
                          "font-medium text-white" %>
 <% end %>
 
-<section class="mt-12">
-  <h2 class="font-medium">Each person pays</h2>
+<%# data-controller sits on the section so SplitLogic can see the rows and the
+    amounts form together. In even mode there are no sliders for it to drive,
+    and it simply has nothing to do. %>
+<section class="mt-12"
+         data-controller="split-logic"
+         data-split-logic-total-cents-value="<%= @split.total_cents %>">
+  <div class="flex items-baseline justify-between">
+    <h2 class="font-medium">Each person pays</h2>
+
+    <%# Two submit buttons in one form, each sending its own split_mode. %>
+    <%= form_with model: @split, class: "flex", id: "split_mode" do |form| %>
+      <% Split.split_modes.each_key do |mode| %>
+        <%= form.button mode.titleize,
+                        name: "split[split_mode]",
+                        value: mode,
+                        class: class_names(
+                          "border-2 border-black px-3 py-1 text-sm",
+                          "bg-black text-white" => @split.split_mode == mode,
+                          "border-s-0" => mode != Split.split_modes.keys.first
+                        ),
+                        aria: { pressed: @split.split_mode == mode } %>
+      <% end %>
+    <% end %>
+  </div>
+
+  <% if @split.custom? %>
+    <p class="mt-2 text-sm text-black/70">
+      Drag a share to set it. Rows you touch lock; the rest share what is left.
+    </p>
+  <% end %>
 
   <%= render "splits/participants", split: @split %>
   <%= render "splits/remaining", split: @split %>
+
+  <%# The amounts form holds no fields of its own. The sliders and locks live up
+      in the rows and point at it with the HTML form attribute. %>
+  <% if @split.custom? %>
+    <%= form_with model: @split, id: "split_amounts", data: { split_logic_target: "form" } do |form| %>
+      <%= form.submit "Save amounts",
+                      class: "mt-6 w-full border-2 border-black bg-black px-4 py-3 " \
+                             "font-medium text-white" %>
+    <% end %>
+  <% end %>
 
   <%= button_to "Add a person", split_participants_path(@split),
                 disabled: @split.participants.size >= SplitMath::PEOPLE_RANGE.max,

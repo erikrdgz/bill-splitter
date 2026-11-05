@@ -434,3 +434,57 @@ that event is how Turbo knows to put the response in the frame instead of the pa
 
 A row named "Marissa" is a link reading "Marissa", and a picker result is a button reading
 "Marissa". `click_on` found both. `click_button` and `click_link` say which one is meant.
+
+## Step 6 — Custom split sliders
+
+### Sliders work in cents, not dollars
+
+The range input's `min`, `max`, `step` and `value` are all whole cents, and `step="1"` is one
+cent. The browser therefore never rounds money on our behalf — there is no decimal for it to
+round.
+
+### The `form` attribute, so the sliders can live inside the rows
+
+Each row already contains a remove button, which `button_to` renders as its own `<form>`. A
+form cannot be nested in a form, so the sliders and locks carry `form="split_amounts"` and
+belong to the amounts form further down the page.
+
+**Why this over the alternatives:** turning the remove button into a link with
+`data-turbo-method="delete"` makes a destructive action a link, which is worse for assistive
+technology and breaks without JavaScript. Giving every row its own form would mean a request
+per row and a different route than the spec's `PATCH /splits/:id`. The HTML `form` attribute is
+the feature designed for exactly this, and it costs one attribute.
+
+### The browser locks a row the moment it is dragged
+
+Rule 3 says a row the organizer has set locks. "Set" is the first movement, not the release —
+otherwise dragging one slider would make the others chase it and then snap back. The lock
+checkbox is ticked on the first `input` event, and tapping it frees the row again.
+
+### `input` moves the rows, `change` saves them
+
+`input` fires continuously while dragging, `change` once on release. So the untouched rows
+follow along live, and exactly one request is sent when the organizer lets go. The spec's "on
+release, save" falls out of the two events the browser already provides.
+
+### The server recomputes rather than trusting what the sliders posted
+
+`SplitsController#update` reads only each row's `amount_cents` and `locked`, then calls
+`apply_custom_split`. If the browser's arithmetic drifted, the server's replaces it. There is a
+test that posts deliberately wrong amounts and asserts the saved rows add up to the total
+anyway.
+
+### Locked rows that overshoot are refused rather than silently clamped
+
+If the locked rows come to more than the total, `SplitMath` gives the unlocked rows zero, the
+split no longer adds up, and the validation refuses the save. The organizer sees why. Silently
+scaling the locked rows down would be the app overruling an explicit instruction.
+
+### A note on Capybara: `all(...)` is not just slow to wait, it can go stale
+
+The earlier fix — waiting on a marker before reading the rows — was not enough. `all` returns
+element handles, and if Turbo swaps the page between taking the handles and reading their text,
+Selenium raises `StaleElementReferenceError`. The reads are now
+`assert_row_amounts` / `assert_row_percentages` in `ApplicationSystemTestCase`, built on
+`assert_selector ... text:`, which retries the whole match. The suite was run three times in a
+row to confirm the flakiness is gone rather than hiding.

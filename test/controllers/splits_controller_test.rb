@@ -208,6 +208,106 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 10_000, split.reload.total_cents
   end
 
+  # Custom mode.
+
+  test "a split starts in even mode and can be switched to custom" do
+    split = create_split(amount: "100", people_count: 3)
+
+    assert_predicate split, :even?
+
+    patch split_url(split), params: { split: { split_mode: "custom" } }
+
+    assert_predicate split.reload, :custom?
+  end
+
+  test "custom amounts are respread around the locked rows" do
+    split = create_split(amount: "100", people_count: 3)
+    patch split_url(split), params: { split: { split_mode: "custom" } }
+    first, second, third = split.reload.participants.to_a
+
+    patch split_url(split), params: { split: {
+      participants_attributes: [
+        { id: first.id, amount_cents: 5000, locked: "1" },
+        { id: second.id, amount_cents: 2500, locked: "0" },
+        { id: third.id, amount_cents: 2500, locked: "0" }
+      ]
+    } }
+
+    assert_equal [ 5000, 2500, 2500 ], split.reload.participants.map(&:amount_cents)
+    assert_equal [ true, false, false ], split.participants.map(&:locked?)
+  end
+
+  # The spec's promise: the server has the final say. The browser here is
+  # claiming amounts that do not add up to the total.
+  test "amounts the browser got wrong are replaced by the server's" do
+    split = create_split(amount: "100", people_count: 3)
+    patch split_url(split), params: { split: { split_mode: "custom" } }
+    first, second, third = split.reload.participants.to_a
+
+    patch split_url(split), params: { split: {
+      participants_attributes: [
+        { id: first.id, amount_cents: 6000, locked: "1" },
+        { id: second.id, amount_cents: 9999, locked: "0" },
+        { id: third.id, amount_cents: 9999, locked: "0" }
+      ]
+    } }
+
+    split.reload
+
+    assert_equal [ 6000, 2000, 2000 ], split.participants.map(&:amount_cents)
+    assert_equal 10_000, split.participants.sum(&:amount_cents)
+  end
+
+  test "locked rows that come to more than the total are refused" do
+    split = create_split(amount: "100", people_count: 3)
+    patch split_url(split), params: { split: { split_mode: "custom" } }
+    first, second, third = split.reload.participants.to_a
+
+    patch split_url(split), params: { split: {
+      participants_attributes: [
+        { id: first.id, amount_cents: 9000, locked: "1" },
+        { id: second.id, amount_cents: 9000, locked: "1" },
+        { id: third.id, amount_cents: 0, locked: "0" }
+      ]
+    } }
+
+    assert_response :unprocessable_entity
+    assert_select "div[role=alert]", text: /must add up to the total/
+    assert_equal [ 3334, 3333, 3333 ], split.reload.participants.map(&:amount_cents)
+  end
+
+  test "switching back to even frees every row and spreads the money again" do
+    split = create_split(amount: "100", people_count: 3)
+    patch split_url(split), params: { split: { split_mode: "custom" } }
+    first = split.reload.participants.first
+
+    patch split_url(split), params: { split: {
+      participants_attributes: [ { id: first.id, amount_cents: 5000, locked: "1" } ]
+    } }
+
+    assert_predicate split.reload.participants.first, :locked?
+
+    patch split_url(split), params: { split: { split_mode: "even" } }
+
+    split.reload
+
+    assert_equal [ 3334, 3333, 3333 ], split.participants.map(&:amount_cents)
+    assert_not split.participants.any?(&:locked?)
+  end
+
+  test "a row from another split cannot be smuggled into the nested attributes" do
+    split = create_split(amount: "100", people_count: 3)
+
+    patch split_url(split), params: { split: {
+      participants_attributes: [
+        { id: participants(:stranger_one).id, amount_cents: 1, locked: "1" }
+      ]
+    } }
+
+    assert_response :not_found
+    assert_equal 3000, participants(:stranger_one).reload.amount_cents
+  end
+
   test "a split can never be saved in a state that does not add up" do
     split = create_split(amount: "100", people_count: 3)
 

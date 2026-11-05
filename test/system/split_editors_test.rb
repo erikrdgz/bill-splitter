@@ -11,7 +11,7 @@ class SplitEditorsTest < ApplicationSystemTestCase
     assert_selector "h1", text: "Edit split"
     assert_field "Title", with: "Split on #{Date.current.strftime('%B %-d')}"
     assert_field "Total", with: "100.00"
-    assert_equal [ "$33.34", "$33.33", "$33.33" ], row_amounts
+    assert_row_amounts [ "$33.34", "$33.33", "$33.33" ]
     assert_text "Remaining\n$0.00"
   end
 
@@ -35,7 +35,7 @@ class SplitEditorsTest < ApplicationSystemTestCase
     # reading straight after the click can catch the page Turbo is replacing.
     assert_text "Saved."
 
-    assert_equal [ "$30.00", "$30.00", "$30.00" ], row_amounts
+    assert_row_amounts [ "$30.00", "$30.00", "$30.00" ]
   end
 
   test "a total that leaves somebody nothing is refused and nothing is saved" do
@@ -53,7 +53,7 @@ class SplitEditorsTest < ApplicationSystemTestCase
     visit editor_url
 
     assert_field "Total", with: "100.00"
-    assert_equal [ "$33.34", "$33.33", "$33.33" ], row_amounts
+    assert_row_amounts [ "$33.34", "$33.33", "$33.33" ]
   end
 
   private
@@ -66,9 +66,5 @@ class SplitEditorsTest < ApplicationSystemTestCase
     assert_selector "h1", text: "Edit split"
 
     current_url
-  end
-
-  def row_amounts
-    all("ol#participants > li .tabular-nums.font-medium").map(&:text)
   end
 end

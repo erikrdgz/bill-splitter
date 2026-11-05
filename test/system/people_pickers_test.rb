@@ -46,7 +46,7 @@ class PeoplePickersTest < ApplicationSystemTestCase
     click_button "Marissa"
 
     assert_link "Name Marissa", count: 2
-    assert_equal [ "$33.34", "$33.33", "$33.33" ], row_amounts
+    assert_row_amounts [ "$33.34", "$33.33", "$33.33" ]
   end
 
   test "a search with no match says so and offers to save the name" do
@@ -74,14 +74,14 @@ class PeoplePickersTest < ApplicationSystemTestCase
   test "adding a person respreads the money without reloading the page" do
     open_editor_for "90", 2
 
-    assert_equal [ "$45.00", "$45.00" ], row_amounts
+    assert_row_amounts [ "$45.00", "$45.00" ]
 
     click_on "Add a person"
 
     # Wait for the Turbo Stream to land before reading: all() does not retry.
     assert_selector "ol#participants > li", count: 3
 
-    assert_equal [ "$30.00", "$30.00", "$30.00" ], row_amounts
+    assert_row_amounts [ "$30.00", "$30.00", "$30.00" ]
     assert_text "Remaining\n$0.00"
   end
 
@@ -92,7 +92,7 @@ class PeoplePickersTest < ApplicationSystemTestCase
 
     assert_selector "ol#participants > li", count: 2
 
-    assert_equal [ "$45.00", "$45.00" ], row_amounts
+    assert_row_amounts [ "$45.00", "$45.00" ]
   end
 
   test "the last two people cannot be removed" do
@@ -117,9 +117,5 @@ class PeoplePickersTest < ApplicationSystemTestCase
     fill_in "Find a name", with: name
     click_on "Add “#{name}” as a new person"
     assert_link "Name #{name}"
-  end
-
-  def row_amounts
-    all("ol#participants > li .tabular-nums.font-medium").map(&:text)
   end
 end

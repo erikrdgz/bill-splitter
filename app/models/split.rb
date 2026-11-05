@@ -17,6 +17,11 @@ class Split < ApplicationRecord
   # database holding a split that does not add up.
   has_many :participants, -> { order(:position) }, dependent: :destroy, autosave: true
 
+  # The custom-split form posts every row's amount and lock at once. Rails
+  # refuses an id that is not in this association, so a forged request cannot
+  # reach into another split's rows.
+  accepts_nested_attributes_for :participants
+
   validates :title, presence: true, length: { maximum: 80 }
   validates :owner_token, presence: true
   validates :total_cents, numericality: {

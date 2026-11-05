@@ -67,7 +67,10 @@ class SplitsController < ApplicationController
   end
 
   def split_params
-    params.expect(split: %i[title amount])
+    params.expect(
+      split: [ :title, :amount, :split_mode,
+               { participants_attributes: [ [ :id, :amount_cents, :locked ] ] } ]
+    )
   end
 
   # The quick split has no title field — naming the split is what the editor is

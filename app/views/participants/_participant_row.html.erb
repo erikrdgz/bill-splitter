@@ -3,29 +3,82 @@
     shown to one decimal, per rule 5 — it is never added back up.
 
     dom_id gives the row a stable id (participant_42) so a Turbo Stream can
-    replace or remove exactly this row. %>
+    replace or remove exactly this row.
+
+    In custom mode the row also carries a slider and a lock. Those inputs sit
+    inside this <li>, but `form:` associates them with the amounts form further
+    down the page — a form cannot be nested inside the remove button's form, and
+    the HTML form attribute is how a control says which form it belongs to. %>
+<% field_name = ->(attribute) { "split[participants_attributes][#{participant_counter}][#{attribute}]" } %>
+
 <li id="<%= dom_id(participant) %>"
-    class="flex items-baseline justify-between gap-3 border-t border-black/20 py-3">
-  <%= render "participants/participant_name", participant: participant, split: split %>
+    class="border-t border-black/20 py-3"
+    data-split-logic-target="row">
 
-  <span class="flex shrink-0 items-baseline gap-3">
-    <span class="text-sm tabular-nums text-black/60">
-      <%= number_with_precision(participant.percentage, precision: 1) %>%
-    </span>
-    <span class="w-20 text-right font-medium tabular-nums">
-      <%= money(participant.amount_cents) %>
-    </span>
+  <div class="flex items-baseline justify-between gap-3">
+    <%= render "participants/participant_name", participant: participant, split: split %>
 
-    <%# Disabled rather than hidden at the minimum, so the control does not move
-        around as rows come and go. The controller refuses it too. %>
-    <%= button_to split_participant_path(split, participant),
-                  method: :delete,
-                  disabled: !removable,
-                  class: "size-8 border border-black/40 text-sm leading-none " \
-                         "disabled:border-black/15 disabled:text-black/25",
-                  aria: { label: "Remove #{participant.display_name}" },
-                  form: { data: { turbo_confirm: "Remove #{participant.display_name}?" } } do %>
-      &times;
-    <% end %>
-  </span>
+    <span class="flex shrink-0 items-baseline gap-3">
+      <span class="text-sm tabular-nums text-black/60" data-split-logic-target="percentage">
+        <%= number_with_precision(participant.percentage, precision: 1) %>%
+      </span>
+      <span class="w-20 text-right font-medium tabular-nums" data-split-logic-target="amount">
+        <%= money(participant.amount_cents) %>
+      </span>
+
+      <%# Disabled rather than hidden at the minimum, so the control does not move
+          around as rows come and go. The controller refuses it too. %>
+      <%= button_to split_participant_path(split, participant),
+                    method: :delete,
+                    disabled: !removable,
+                    class: "size-8 border border-black/40 text-sm leading-none " \
+                           "disabled:border-black/15 disabled:text-black/25",
+                    aria: { label: "Remove #{participant.display_name}" },
+                    form: { data: { turbo_confirm: "Remove #{participant.display_name}?" } } do %>
+        &times;
+      <% end %>
+    </span>
+  </div>
+
+  <% if split.custom? %>
+    <div class="mt-2 flex items-center gap-3">
+      <%= hidden_field_tag field_name.call(:id), participant.id,
+                           id: nil, form: "split_amounts" %>
+
+      <%# Rule 4: the maximum is the total minus everyone else who is locked.
+          SplitLogic recomputes it on every drag; this is the value it starts at,
+          worked out by the same rule on the server. %>
+      <input type="range"
+             name="<%= field_name.call(:amount_cents) %>"
+             form="split_amounts"
+             min="0"
+             max="<%= SplitMath.maximum_for_row(
+                        total_cents: split.total_cents,
+                        other_locked_amounts: split.participants
+                                                   .reject { |other| other == participant }
+                                                   .select(&:locked?)
+                                                   .map(&:amount_cents)) %>"
+             step="1"
+             value="<%= participant.amount_cents %>"
+             class="w-full"
+             aria-label="<%= participant.display_name %>'s share"
+             data-split-logic-target="slider"
+             data-action="input->split-logic#drag change->split-logic#save">
+
+      <%# The hidden field is how an unchecked box still sends a value. It needs
+          the form attribute too, or it would belong to the remove button's form. %>
+      <%= hidden_field_tag field_name.call(:locked), "0", id: nil, form: "split_amounts" %>
+      <label class="flex shrink-0 items-center gap-1 text-sm">
+        <input type="checkbox"
+               name="<%= field_name.call(:locked) %>"
+               form="split_amounts"
+               value="1"
+               <%= "checked" if participant.locked? %>
+               aria-label="Lock <%= participant.display_name %>"
+               data-split-logic-target="lock"
+               data-action="split-logic#toggleLock">
+        <span aria-hidden="true">Lock</span>
+      </label>
+    </div>
+  <% end %>
 </li>
