@@ -151,7 +151,7 @@ the server can: the quick split math, the sliders, and debouncing the search.
 | Interaction | Hotwire tool | Request | Controller |
 | --- | --- | --- | --- |
 | Quick split shares update as you type | Stimulus only (`QuickSplitLogic`) | none | none |
-| Save a quick split | Turbo Drive, then redirect to the editor | `POST /splits` | `SplitsController#create` |
+| Save a quick split | Turbo Drive, then redirect to requests | `POST /splits` | `SplitsController#create` |
 | Search saved people | Stimulus debounce + Turbo Frame `people_results` | `GET /people?query=ma` | `PeopleController#index` |
 | Add a person to a split | Turbo Stream: append the row, update every amount and the remaining total | `POST /splits/:id/participants` | `ParticipantsController#create` |
 | Remove a person | Turbo Stream: remove the row, update amounts | `DELETE /splits/:id/participants/:id` | `ParticipantsController#destroy` |
@@ -226,7 +226,7 @@ expects the class name to match the table.
 - `Split`: invalid when participants don't add up to the total, or with fewer than 2 or more
   than 20 people.
 - `Split`: a share token is created on save.
-- Creating a split from the quick split form redirects to the editor.
+- Creating a split from the quick split form redirects to requests.
 - Adding a participant answers with a Turbo Stream that includes the new row.
 - The share page loads by token; a wrong token returns 404.
 - "I paid" sets `paid_at` on that participant only.
@@ -335,3 +335,18 @@ height becomes a thin strip, preventing clipped contents or focus outlines from 
 For local design review, an explicit development-only preview flag can seed each empty browser
 with its own sample contacts. Existing contact lists are untouched; no records are shared across
 browser owners. The flag is an ignored local file, and production never enables this behavior.
+
+
+### Requests-first follow-through — November 5, 2026
+
+Saving or reviewing a draft opens **Send requests**. A compact bill title, total, and people
+count precede the unpaid request cards; each card leads with the name, amount, and chosen
+payment action. Paid rows sit below the requests. Edit is a filled toolbar action, and
+**Save and view requests** persists the editor before navigating.
+
+The shared message contains outstanding amounts and the public split link, not organizer
+charge links. Share requests uses the device share sheet when available, with a copyable
+message fallback. Canceling the share sheet does not claim anything was sent. Cash remains
+an arrangement until explicitly marked paid. Cash App requests and Zelle expose a copyable
+contact and a short app instruction; unsupported Apple Pay and developer demo panels are
+not offered. These replace the earlier demonstration UI described above.

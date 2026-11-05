@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_05_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_05_120000) do
   create_table "participants", force: :cascade do |t|
     t.integer "split_id", null: false
     t.integer "person_id"
@@ -31,7 +31,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_05_090000) do
     t.string "owner_token", null: false
     t.string "venmo_handle"
     t.string "cashapp_cashtag"
-    t.string "zelle_contact"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["owner_token"], name: "index_payment_profiles_on_owner_token", unique: true
@@ -42,9 +41,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_05_090000) do
     t.string "owner_token", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "venmo_handle"
-    t.string "cashapp_cashtag"
-    t.string "zelle_contact"
+    t.string "phone_number"
     t.index ["owner_token", "name"], name: "index_people_on_owner_token_and_name", unique: true
   end
 

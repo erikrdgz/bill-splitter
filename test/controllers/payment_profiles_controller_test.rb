@@ -9,13 +9,13 @@ class PaymentProfilesControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name=?]", "payment_profile[venmo_handle]"
   end
 
-  test "saving handles answers with the frame showing them" do
+  test "saving handles refreshes the page, because the request buttons depend on them" do
     patch payment_profile_url, params: { payment_profile: {
-      venmo_handle: "@erik-r", cashapp_cashtag: "$erikr", zelle_contact: "erik@example.com"
+      venmo_handle: "@erik-r", cashapp_cashtag: "$erikr"
     } }, as: :turbo_stream
 
     assert_response :success
-    assert_select "turbo-frame#payment_profile", text: /Venmo erik-r/
+    assert_select "turbo-stream[action=refresh]"
 
     profile = PaymentProfile.last
 

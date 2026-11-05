@@ -1,8 +1,6 @@
 # A draft can be calculated without records. Only an explicit save persists its
 # connections and amounts, together, so invalid requests leave no orphan people.
 class SplitDraft
-  HANDLE_FIELDS = { "venmo" => :venmo_handle, "cash_app" => :cashapp_cashtag, "zelle" => :zelle_contact }.freeze
-
   def initialize(split, rows)
     @split = split
     @rows = rows
@@ -46,9 +44,7 @@ class SplitDraft
       @named_people ||= {}
       @named_people[name.downcase] ||= scope.find_by("LOWER(name) = ?", name.downcase) || scope.new(name: name)
     end
-    if person && (field = HANDLE_FIELDS[row[:payment_method]]) && row[:handle].present?
-      person.public_send("#{field}=", row[:handle])
-    end
+    person.phone_number = row[:phone_number] if person && row[:phone_number].present?
     person
   end
 end

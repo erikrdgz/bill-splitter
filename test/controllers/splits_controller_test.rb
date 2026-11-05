@@ -57,12 +57,12 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
 
   # Saving a quick split.
 
-  test "creating a split from the quick split form redirects to the editor" do
+  test "creating a split from the quick split form redirects to requests" do
     assert_difference -> { Split.count }, 1 do
       post splits_url, params: { split: { amount: "100", people_count: "3" } }
     end
 
-    assert_redirected_to edit_split_path(Split.find(response.location[%r{/splits/(\d+)/edit}, 1]))
+    assert_redirected_to split_path(Split.find(response.location[%r{/splits/(\d+)}, 1]))
   end
 
   test "the server works the shares out again rather than trusting the browser" do
@@ -186,10 +186,10 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
-  test "an invalid payment handle rolls back the entire draft" do
+  test "an invalid phone number rolls back the entire draft" do
     assert_no_difference [ -> { Split.count }, -> { Person.count } ] do
       post splits_url, params: { split: { amount: "100", people_count: "2",
-        draft_rows: [ { name: "Alex", payment_method: "venmo", handle: "bad & handle", amount_cents: "5000" },
+        draft_rows: [ { name: "Alex", payment_method: "venmo", phone_number: "not a number", amount_cents: "5000" },
                       { amount_cents: "5000" } ] } }
     end
     assert_response :unprocessable_entity
@@ -353,8 +353,9 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     get split_url(split)
 
     assert_response :success
-    assert_select "ol#participants > li", 3
-    assert_select "#owed", text: /\$66\.66/
+    assert_select "ol#participants > li", 1
+    assert_select "ol#requests > li", 2
+    assert_select ".request-balance", text: /\$66\.66/
   end
 
   # Marking somebody paid is something they do on their own share link.
@@ -364,7 +365,7 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     get split_url(split)
 
     assert_select "button", text: "I paid", count: 0
-    assert_select "ol#participants > li", text: /Unpaid/
+    assert_select "ol#requests > li", count: 3
   end
 
   test "the detail page offers the share link to copy" do

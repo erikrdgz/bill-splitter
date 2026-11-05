@@ -43,14 +43,11 @@ class PaymentLinkTest < ActiveSupport::TestCase
     assert_match "cannot ask for it", link.why_demonstrated
   end
 
-  # Zelle and Apple Pay: never real, and they say why.
+  # Apple Pay: never real, and it says why. Zelle is not here at all: it has no
+  # public link format or API, so there is nothing to demonstrate.
 
-  test "Zelle is a demonstration because it has no public link format" do
-    link = build(app: :zelle, handle: "erik@example.com", amount_cents: 3334)
-
-    assert_not_predicate link, :real?
-    assert_nil link.url
-    assert_match "bank", link.why_demonstrated
+  test "Zelle is not an app we know" do
+    assert_raises(ArgumentError) { build(app: :zelle, handle: "erik@example.com", amount_cents: 1) }
   end
 
   test "Apple Pay is a demonstration because it needs a merchant account" do
@@ -59,6 +56,7 @@ class PaymentLinkTest < ActiveSupport::TestCase
     assert_not_predicate link, :real?
     assert_nil link.url
     assert_match "merchant account", link.why_demonstrated
+    assert_not_predicate link, :offerable?
   end
 
   # Nothing is claimed about a handle nobody has given.
@@ -93,8 +91,6 @@ class PaymentLinkTest < ActiveSupport::TestCase
   test "a handle is displayed the way its app writes it" do
     assert_equal "@marissa", build(app: :venmo, handle: "marissa", amount_cents: 1).display_handle
     assert_equal "$marissa", build(app: :cash_app, handle: "marissa", amount_cents: 1).display_handle
-    assert_equal "m@example.com",
-                 build(app: :zelle, handle: "m@example.com", amount_cents: 1).display_handle
   end
 
   test "a summary says who is being asked for what, and where" do

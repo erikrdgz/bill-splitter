@@ -1,12 +1,12 @@
 require "application_system_test_case"
 
 class SplitEditorsTest < ApplicationSystemTestCase
-  test "saving a quick split opens the editor with the shares already worked out" do
+  test "saving a quick split opens requests and the editor keeps the calculated shares" do
     visit root_path
     enter_bill_amount("100")
     set_people_count("3")
 
-    click_on "Save split"
+    save_split_and_open_editor
 
     assert_selector "h1", text: "Edit split"
     assert_field "What was it for?", with: "Split on #{Date.current.strftime('%B %-d')}"
@@ -56,13 +56,25 @@ class SplitEditorsTest < ApplicationSystemTestCase
     assert_row_amounts [ "$33.34", "$33.33", "$33.33" ]
   end
 
+  test "finishing the editor saves changes before opening requests" do
+    open_editor_for "100", 3
+    fill_in "What was it for?", with: "Lunch together"
+    enter_bill_amount("90", label: "Total bill")
+    click_on "Save and view requests"
+    assert_selector "h1", text: "Send requests"
+    assert_text "Lunch together"
+    assert_selector "#requests .request-amount", text: "$30.00", count: 3
+    click_on "Edit split"
+    assert_field "Total bill", with: "90.00"
+  end
+
   private
 
   def open_editor_for(amount, people_count)
     visit root_path
     enter_bill_amount(amount)
     set_people_count(people_count)
-    click_on "Save split"
+    save_split_and_open_editor
     assert_selector "h1", text: "Edit split"
 
     current_url

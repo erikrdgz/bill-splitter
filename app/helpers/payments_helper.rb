@@ -22,14 +22,9 @@ module PaymentsHelper
   # four buttons nobody taps.
   def payment_request_message(split)
     lines = split.participants.reject(&:paid?).map do |participant|
-      link = payment_links_for(participant.person,
-                               amount_cents: participant.amount_cents,
-                               note: split.title,
-                               direction: :charge, payment_method: participant.payment_method).find(&:real?)
-
-      "#{participant.display_name}: #{money(participant.amount_cents)}#{" · #{Participant::PAYMENT_METHODS[participant.payment_method]}" if participant.payment_method}#{" — #{link.url}" if link}"
+      "#{participant.display_name}: #{money(participant.amount_cents)}#{" · #{Participant::PAYMENT_METHODS[participant.payment_method]}" if participant.payment_method}"
     end
 
-    ([ "#{split.title} — #{money(split.total_cents)}" ] + lines).join("\n")
+    ([ "#{split.title} — #{money(split.total_cents)}" ] + lines + [ "", share_url(split.share_token) ]).join("\n")
   end
 end

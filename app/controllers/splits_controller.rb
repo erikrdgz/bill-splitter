@@ -41,7 +41,7 @@ class SplitsController < ApplicationController
     end
 
     if saved
-      redirect_to params[:intent] == "request" ? split_path(@split) : edit_split_path(@split)
+      redirect_to split_path(@split)
     else
       @people_count = rows.present? ? rows.size : submitted_people_count
       render :new, status: :unprocessable_entity
@@ -70,7 +70,7 @@ class SplitsController < ApplicationController
     @split.apply_even_split if @split.even?
 
     if @split.save
-      redirect_to edit_split_path(@split), notice: "Saved."
+      redirect_to params[:intent] == "request" ? split_path(@split) : edit_split_path(@split), notice: "Saved."
     else
       render :edit, status: :unprocessable_entity
     end
@@ -102,7 +102,7 @@ class SplitsController < ApplicationController
 
   def quick_split_params
     params.expect(split: [ :amount, :people_count, :title, { person_ids: [],
-      draft_rows: [ [ :person_id, :name, :payment_method, :handle, :amount_cents, :locked ] ] } ])
+      draft_rows: [ [ :person_id, :name, :payment_method, :phone_number, :amount_cents, :locked ] ] } ])
   end
 
   def split_params

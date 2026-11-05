@@ -14,17 +14,30 @@ export default class extends Controller {
   static targets = [ "source", "confirmation" ]
 
   async copy() {
+    this.sourceTarget.closest("details")?.setAttribute("open", "")
     this.sourceTarget.select()
 
     if (await this.#copied()) {
       this.confirmationTarget.textContent = this.confirmationTarget.dataset.copiedText || "Copied."
     } else {
       // Never claim a copy that did not happen. The text is selected, so
-      // the next thing to try is the keyboard.
-      this.confirmationTarget.textContent = "Press ⌘C or Ctrl+C to copy."
+      // touch selection remains available on a phone.
+      this.confirmationTarget.textContent = "Touch and hold the text to copy."
     }
 
     this.confirmationTarget.hidden = false
+  }
+
+  async share() {
+    if (navigator.share) {
+      try {
+        await navigator.share({ text: this.sourceTarget.value })
+        return
+      } catch (error) {
+        if (error.name === "AbortError") return
+      }
+    }
+    await this.copy()
   }
 
   // Selecting on focus means tapping the field is enough to copy by hand.

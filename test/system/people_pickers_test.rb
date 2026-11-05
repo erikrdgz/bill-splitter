@@ -113,7 +113,7 @@ class PeoplePickersTest < ApplicationSystemTestCase
     enter_bill_amount("90")
     fill_in "What's this for?", with: "Dinner"
     assert_selector "[data-share-row-name]", text: "Alex Rivera"
-    click_on "Save split"
+    save_split_and_open_editor
     assert_link "Name Alex Rivera"
     assert_field "What was it for?", with: "Dinner"
     assert_row_amounts [ "$30.00", "$30.00", "$30.00" ]
@@ -125,7 +125,7 @@ class PeoplePickersTest < ApplicationSystemTestCase
     click_on "New split"
     enter_bill_amount("60")
     set_people_count(2)
-    click_on "Save split"
+    save_split_and_open_editor
     click_on "Custom"
     find("input[type=range]", match: :first).send_keys(:home)
     assert_row_amounts [ "$0.00", "$30.00" ]
@@ -144,7 +144,7 @@ class PeoplePickersTest < ApplicationSystemTestCase
     visit root_path
     enter_bill_amount(amount)
     set_people_count(people_count)
-    click_on "Save split"
+    save_split_and_open_editor
     assert_selector "h1", text: "Edit split"
   end
 

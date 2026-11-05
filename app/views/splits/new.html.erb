@@ -33,8 +33,7 @@
             <button type="button" class="friend-choice" aria-label="Add <%= person.name %>"
               data-action="quick-split-logic#chooseFriend" data-person-id="<%= person.id %>"
               data-friend-name="<%= person.name %>"
-              data-venmo="<%= person.venmo_handle %>" data-cash-app="<%= person.cashapp_cashtag %>"
-              data-zelle="<%= person.zelle_contact %>" data-quick-split-logic-target="friend">
+              data-phone-number="<%= person.display_phone_number %>" data-quick-split-logic-target="friend">
               <%= render "shared/avatar", name: person.name %>
               <span class="friend-name"><%= person.name %></span>
             </button>
@@ -94,8 +93,9 @@
       <% end %>
     </fieldset>
     <div data-quick-split-logic-target="handleFields">
-      <label for="connection_handle" data-quick-split-logic-target="handleLabel">Venmo username</label>
-      <div class="line-field"><input id="connection_handle" type="text" autocomplete="off" autocapitalize="none" data-quick-split-logic-target="connectionHandle"></div>
+      <label for="connection_phone">Phone number</label>
+      <p class="helper">We text them a link to pay you.</p>
+      <div class="line-field"><input id="connection_phone" type="tel" autocomplete="off" placeholder="(555) 123-0101" data-quick-split-logic-target="connectionPhone"></div>
     </div>
     <p class="form-error" role="alert" data-quick-split-logic-target="connectionError" hidden></p>
     <button type="button" class="primary-button mt-6" data-action="quick-split-logic#confirmConnection">Connect</button>

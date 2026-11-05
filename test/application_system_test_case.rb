@@ -23,6 +23,13 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
 
   private
 
+  def save_split_and_open_editor
+    click_on "Save split"
+    assert_selector "h1", text: "Send requests"
+    click_on "Edit split"
+    assert_selector "h1", text: "Edit split"
+  end
+
   def enter_bill_amount(amount, label: "Amount")
     find_field(label).click
     within "dialog[open][aria-label='Enter bill amount']" do

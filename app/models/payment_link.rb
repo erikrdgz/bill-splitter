@@ -1,27 +1,14 @@
-# Turns "ask Marissa for $33.34" into something tappable.
-#
-# Venmo and Cash App publish URL formats that open their app with the amount
-# already filled in, and they need no account, no API key and no approval — so
-# those are real links that really work.
-#
-# Zelle has no public link format at all: it lives inside each bank's own app.
-# Apple Pay needs a merchant account, a payment processor and server-side
-# merchant validation. Those two are built here as honest demonstrations: the
-# app shows exactly what it would send and says plainly that it is not sending
-# it. Pretending otherwise would be the one genuinely dishonest thing this
-# feature could do.
-#
-# Plain Ruby with no table behind it, like SplitMath: a rule, not a record.
+# Provider links are available only when that app supports the direction.
+# Other configured methods offer manual contact copying in the view.
 class PaymentLink
   # :charge asks somebody for money, :pay sends it.
   DIRECTIONS = %i[charge pay].freeze
 
-  APPS = %i[venmo cash_app zelle apple_pay].freeze
+  APPS = %i[venmo cash_app apple_pay].freeze
 
   NAMES = {
     venmo: "Venmo",
     cash_app: "Cash App",
-    zelle: "Zelle",
     apple_pay: "Apple Pay"
   }.freeze
 
@@ -30,7 +17,6 @@ class PaymentLink
   WHY_DEMONSTRATED = {
     cash_app: "Cash App links can send money but cannot ask for it. A real request " \
               "would be made in the app.",
-    zelle: "Zelle has no public link format — it works inside your bank's own app.",
     apple_pay: "Apple Pay needs a merchant account and a payment processor to take money."
   }.freeze
 
@@ -51,11 +37,9 @@ class PaymentLink
     NAMES.fetch(app)
   end
 
-  # Worth putting on screen at all. Apple Pay needs no handle — it belongs to
-  # the device, not to the person — but offering "Cash App (not set)" would be
-  # four dead controls where one would do.
+  # Only configured methods with an available payment workflow are offered.
   def offerable?
-    app == :apple_pay || handle.present?
+    app != :apple_pay && handle.present?
   end
 
   # True only when this really opens the app with the amount filled in.

@@ -15,8 +15,8 @@ class PaymentsTest < ApplicationSystemTestCase
     # The friend's side of the same split.
     visit share_path(split.share_token)
 
-    assert_link "Venmo →"
-    assert_link "Cash App →"
+    assert_link "Pay with Venmo"
+    assert_link "Pay with Cash App"
   end
 
   test "a bad handle is refused without losing the rest of the form" do
@@ -40,83 +40,120 @@ class PaymentsTest < ApplicationSystemTestCase
     assert_no_field "Venmo username"
   end
 
-  test "the organizer gives a friend a handle and can then request from them" do
+  test "the organizer gives a friend a phone number and can then text them" do
     open_split_detail_with_named_person
+    save_organizer_venmo
 
     within "#requests" do
-      click_on "Add payment details"
+      click_on "Add phone number"
     end
-    fill_in "Venmo username", with: "marissa-v"
+    fill_in "Phone number", with: "(555) 555-0101"
     click_on "Save"
 
-    assert_text "Venmo marissa-v"
-    assert_link "Venmo →"
+    assert_link "Change phone number"
+    link = find("#requests a.payment-action", text: "Text Venmo link to Marissa")
+    assert link[:href].start_with?("sms:+15555550101?&body=")
   end
 
-  # Nothing is dressed up as working when it is not.
-  test "an app that cannot really request says so when opened" do
+  test "a bad phone number is refused without losing what was typed" do
     open_split_detail_with_named_person
 
     within "#requests" do
-      click_on "Add payment details"
+      click_on "Add phone number"
     end
-    fill_in "Cash App $Cashtag", with: "marissa"
+    fill_in "Phone number", with: "call me"
     click_on "Save"
 
-    assert_text "Cash App (demo)"
-
-    find("summary", text: "Cash App").click
-
-    assert_text "Nothing has been sent."
-    assert_text "cannot ask for it"
+    assert_text "is not a phone number"
+    assert_field "Phone number", with: "call me"
   end
 
-  # Apple Pay belongs to the device, not to a handle, so it is always on offer —
-  # and always honest about being a demonstration.
-  test "apps nobody has a handle for are not shown as dead controls" do
+  test "nothing is offered for an app the organizer cannot be paid on" do
     open_split_detail_with_named_person
 
     within "#requests" do
-      click_on "Add payment details"
-    end
-    fill_in "Venmo username", with: "marissa-v"
-    click_on "Save"
-
-    within "#requests" do
-      assert_link "Venmo →"
-      assert_no_text "Cash App"
       assert_no_text "Zelle"
-      assert_text "Apple Pay (demo)"
+      assert_no_text "Apple Pay"
+      assert_no_text "demo"
+      assert_no_selector "a[href^='sms:']"
     end
   end
 
   test "a row with nobody named says what to do about it" do
     open_split_detail
 
-    assert_text "Name this row in the editor and you can ask them here."
+    assert_selector "#requests a", text: "Connect a friend", count: 3
   end
 
   test "the whole set of requests copies as one message" do
     open_split_detail_with_named_person
 
+    find("summary", text: "View group message").click
     click_on "Copy the message"
 
     # Either the clipboard worked or the page said how to copy by hand. It never
     # claims a copy that did not happen.
-    assert_selector "[role=status]", text: /copied|⌘C/i
+    assert_selector "[role=status]", text: /copied|text to copy/i
+  end
+
+  test "sharing uses the device share sheet with the payer link" do
+    split = open_split_detail
+    page.execute_script(<<~JS)
+      Object.defineProperty(navigator, "share", { configurable: true, value: async (data) => {
+        document.body.dataset.sharedMessage = data.text
+      } })
+    JS
+    click_on "Share requests"
+    assert_eventually { page.evaluate_script("document.body.dataset.sharedMessage").to_s.include?(share_path(split.share_token)) }
+    assert_selector "#requests > li", count: 3
+    assert_no_text "Message copied."
+    assert_not split.reload.fully_paid?
+  end
+
+  test "canceling the share sheet leaves requests unchanged" do
+    open_split_detail
+    page.execute_script(<<~JS)
+      Object.defineProperty(navigator, "share", { configurable: true, value: async () => {
+        throw new DOMException("Canceled", "AbortError")
+      } })
+    JS
+    click_on "Share requests"
+    assert_selector "#requests > li", count: 3
+    assert_no_selector ".message-preview[open]"
+    assert_no_text "Message copied."
+  end
+
+  test "sharing falls back to a readable message when native sharing fails" do
+    split = open_split_detail
+    page.execute_script(<<~JS)
+      Object.defineProperty(navigator, "share", { configurable: true, value: async () => {
+        throw new Error("Unavailable")
+      } })
+    JS
+    click_on "Share requests"
+    assert_selector ".message-preview[open]"
+    assert_field "Every request as one message", with: /#{Regexp.escape(share_path(split.share_token))}/
+    assert_selector "[role=status]", text: /copied|text to copy/i
   end
 
   private
+
+  def save_organizer_venmo
+    click_on "Add how you get paid"
+    fill_in "Venmo username", with: "erik-r"
+    click_on "Save"
+    assert_text "Friends can pay you at Venmo erik-r"
+  end
 
   def open_split_detail
     visit root_path
     enter_bill_amount("100")
     set_people_count("3")
-    click_on "Save split"
+    save_split_and_open_editor
     assert_selector "h1", text: "Edit split"
 
-    click_on "Share and request money"
-    assert_selector "h2", text: "Share this split"
+    click_on "Save and view requests"
+    assert_selector "h1", text: "Send requests"
 
     Split.find(current_url[%r{/splits/(\d+)}, 1])
   end
@@ -125,7 +162,7 @@ class PaymentsTest < ApplicationSystemTestCase
     visit root_path
     enter_bill_amount("100")
     set_people_count("3")
-    click_on "Save split"
+    save_split_and_open_editor
     assert_selector "h1", text: "Edit split"
 
     click_on "Name Person 1"
@@ -133,7 +170,7 @@ class PaymentsTest < ApplicationSystemTestCase
     click_on "Add “Marissa” as a new person"
     assert_link "Name Marissa"
 
-    click_on "Share and request money"
-    assert_selector "h2", text: "Ask for the money"
+    click_on "Save and view requests"
+    assert_selector "h1", text: "Send requests"
   end
 end

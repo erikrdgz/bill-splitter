@@ -14,7 +14,7 @@ class CustomSplitsTest < ApplicationSystemTestCase
     click_on "Custom"
 
     assert_selector "input[type='range']", count: 3
-    assert_text "Drag a share to set it"
+    assert_button "Spread the rest evenly"
     # Switching mode changes nothing about the money on its own.
     assert_row_amounts [ "$30.00", "$30.00", "$30.00" ]
   end
@@ -231,7 +231,7 @@ class CustomSplitsTest < ApplicationSystemTestCase
     visit root_path
     enter_bill_amount(amount)
     set_people_count(people_count)
-    click_on "Save split"
+    save_split_and_open_editor
     assert_selector "h1", text: "Edit split"
   end
 

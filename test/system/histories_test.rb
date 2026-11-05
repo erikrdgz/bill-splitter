@@ -39,8 +39,8 @@ class HistoriesTest < ApplicationSystemTestCase
     visit splits_path
     click_on "Dinner at Rosalia"
 
-    assert_selector "h1", text: "Dinner at Rosalia"
-    assert_selector "h2", text: "Who has paid"
+    assert_selector "h1", text: "Send requests"
+    assert_text "Dinner at Rosalia"
   end
 
   test "history is reachable from every screen" do
@@ -66,7 +66,7 @@ class HistoriesTest < ApplicationSystemTestCase
     visit root_path
     enter_bill_amount(amount)
     set_people_count(people_count)
-    click_on "Save split"
+    save_split_and_open_editor
     assert_selector "h1", text: "Edit split"
 
     fill_in "What was it for?", with: title

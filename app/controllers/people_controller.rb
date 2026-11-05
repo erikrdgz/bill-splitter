@@ -1,5 +1,5 @@
-# The people picker behind a participant row, and the payment handles a saved
-# person can be asked for money at.
+# The people picker behind a participant row, and the phone number a saved
+# person is texted at.
 #
 # index is the search. It renders one template that holds two nested Turbo
 # Frames: the row's name frame, and the results frame inside it. Opening the
@@ -21,8 +21,7 @@ class PeopleController < ApplicationController
   def search
     query = params[:query].to_s.strip.first(40)
     people = query.present? ? Person.owned_by(owner_token).matching(query).by_name.limit(20) : []
-    render json: people.map { |person| { id: person.id, name: person.name,
-      venmo: person.venmo_handle, cashApp: person.cashapp_cashtag, zelle: person.zelle_contact } }
+    render json: people.map { |person| { id: person.id, name: person.name, phoneNumber: person.phone_number } }
   end
 
   # "Add [name] as a new person": saves the name for next time and puts it on
@@ -98,7 +97,8 @@ class PeopleController < ApplicationController
       render turbo_stream: turbo_stream.replace(
         ActionView::RecordIdentifier.dom_id(@participant, :request),
         partial: "payments/request_row",
-        locals: { participant: @participant, split: @split }
+        locals: { participant: @participant, split: @split,
+                   payment_profile: PaymentProfile.for_owner(owner_token) }
       )
     else
       render partial: "people/payment_details", locals: { person: @person }
@@ -114,9 +114,9 @@ class PeopleController < ApplicationController
     params.expect(person: [ :name ])
   end
 
-  # Only the handles. The name is set when the person is created, and renaming
-  # somebody from a payment form would be a surprise.
+  # Only the phone number. The name is set when the person is created, and renaming
+  # somebody from this form would be a surprise.
   def payment_handle_params
-    params.expect(person: %i[venmo_handle cashapp_cashtag zelle_contact])
+    params.expect(person: [ :phone_number ])
   end
 end

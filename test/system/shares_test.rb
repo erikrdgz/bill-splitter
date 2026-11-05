@@ -64,21 +64,22 @@ class SharesTest < ApplicationSystemTestCase
   test "the organizer sees who has paid and can copy the link" do
     split = open_editor_and_share
 
-    assert_selector "h2", text: "Who has paid"
+    assert_selector "h1", text: "Send requests"
+    find("summary", text: "Split link", exact_text: true).click
     assert_field "Share link", with: share_url(split.share_token)
 
     click_on "Copy"
 
     # Either the clipboard worked or the page said how to copy by hand. It never
     # claims a copy that did not happen.
-    assert_selector "[role=status]", text: /copied|⌘C/i
+    assert_selector "[role=status]", text: /copied|text to copy/i
   end
 
   test "the organizer's page does not offer to pay for people" do
     open_editor_and_share
 
     assert_no_button "I paid"
-    assert_text "Unpaid"
+    assert_selector "#requests > li", count: 3
   end
 
   private
@@ -87,11 +88,11 @@ class SharesTest < ApplicationSystemTestCase
     visit root_path
     enter_bill_amount("100")
     set_people_count("3")
-    click_on "Save split"
+    save_split_and_open_editor
     assert_selector "h1", text: "Edit split"
 
-    click_on "Share and request money"
-    assert_selector "h2", text: "Share this split"
+    click_on "Save and view requests"
+    assert_selector "h1", text: "Send requests"
 
     Split.find(current_url[%r{/splits/(\d+)}, 1])
   end

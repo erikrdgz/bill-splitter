@@ -51,7 +51,7 @@ class AmountKeypadsTest < ApplicationSystemTestCase
       click_on "Cancel amount"
     end
     assert_button "Edit Alex's amount", text: "$200.25"
-    click_on "Save split"
+    save_split_and_open_editor
     assert_row_amounts [ "$200.25", "$500.00" ]
     click_on "Edit Alex's amount"
     within "dialog[open][aria-label='Amount for Alex']" do

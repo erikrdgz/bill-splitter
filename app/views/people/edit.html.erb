@@ -1,20 +1,20 @@
 <turbo-frame id="<%= dom_id(@person, :payment) %>" class="block">
-  <div class="mt-2 border-2 border-line p-3">
-    <h3 class="font-medium">Where can <%= @person.name %> be paid?</h3>
+  <div class="payment-editor">
+    <h3 class="font-medium">Where can we text <%= @person.name %>?</h3>
 
     <%= form_with model: @person, class: "mt-3" do |form| %>
       <%= render "shared/errors", record: @person %>
       <%# Carried through so the answer can redraw the request row this form was
-          opened from, buttons and all. %>
+          opened from, button and all. %>
       <%= hidden_field_tag :participant_id, @participant&.id %>
-      <%= render "payments/handle_fields", form: form %>
+      <div class="handle-field">
+        <%= form.label :phone_number, "Phone number" %>
+        <div class="line-field"><%= form.telephone_field :phone_number, placeholder: "(555) 123-0101", autocomplete: "off" %></div>
+      </div>
 
       <div class="mt-4 flex gap-2">
-        <%= form.submit "Save",
-                        class: "flex-1 border-2 border-line bg-accent px-3 py-2 " \
-                               "text-sm font-medium text-ink" %>
-        <%= link_to "Cancel", person_path(@person),
-                    class: "flex-1 border-2 border-line px-3 py-2 text-center text-sm font-medium" %>
+        <%= form.submit "Save", class: "primary-button flex-1" %>
+        <%= link_to "Cancel", person_path(@person), class: "soft-button flex-1" %>
       </div>
     <% end %>
   </div>

@@ -17,6 +17,8 @@ class DevelopmentContactsTest < ActiveSupport::TestCase
     assert_equal 8, second.count
     assert_empty first.ids & second.ids
     assert_equal DevelopmentContacts::NAMES.sort, first.pluck(:name).sort
+    assert(first.all? { |person| person.phone_number.present? })
+    assert_equal "erik-r", PaymentProfile.for_owner("preview-first").venmo_handle
     assert_no_difference -> { Person.count } do
       DevelopmentContacts.populate("preview-first")
     end

@@ -27,7 +27,7 @@
       <% elsif payable %>
         <%= button_to "I paid",
                       share_payment_path(split.share_token, participant),
-                      class: "w-24 border-2 border-line px-2 py-1 text-sm font-medium",
+                      class: "soft-button w-24",
                       form: {
                         data: {
                           turbo_confirm: "Mark #{participant.display_name} as paid? " \

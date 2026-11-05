@@ -73,4 +73,23 @@ class PersonTest < ActiveSupport::TestCase
   def build_person(name: "Someone new", owner_token: "organizer-token")
     Person.new(name: name, owner_token: owner_token)
   end
+
+  # The phone number a request is texted to.
+
+  test "phone numbers are stored in one international form" do
+    { "(555) 555-0101" => "+15555550101", "555.555.0101" => "+15555550101",
+      "1 555 555 0101" => "+15555550101", "+44 20 7946 0958" => "+442079460958" }.each do |typed, stored|
+      assert_equal stored, Person.new(name: "A", owner_token: "t", phone_number: typed).phone_number
+    end
+  end
+
+  test "a blank phone number becomes nil and anything else must be a real shape" do
+    assert_nil Person.new(name: "A", owner_token: "t", phone_number: "  ").phone_number
+    assert_not Person.new(name: "A", owner_token: "t", phone_number: "12345").valid?
+    assert_not Person.new(name: "A", owner_token: "t", phone_number: "call me").valid?
+  end
+
+  test "a US number is displayed the way people write it" do
+    assert_equal "(555) 555-0101", Person.new(phone_number: "5555550101").display_phone_number
+  end
 end

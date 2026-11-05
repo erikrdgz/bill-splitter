@@ -16,7 +16,7 @@
     <input type="range" min="0" max="100" value="0" step="1" aria-label="Person <%= position %>'s share" data-share-row-slider data-action="input->quick-split-logic#drag keydown->quick-split-logic#stepShare">
     <label class="percent-control"><input type="text" inputmode="decimal" value="0" aria-label="Person <%= position %>'s percentage" data-share-row-percent data-action="change->quick-split-logic#setPercentage"><span>%</span></label>
   </div>
-  <% %w[person_id name payment_method handle amount_cents locked].each do |field| %>
+  <% %w[person_id name payment_method phone_number amount_cents locked].each do |field| %>
     <input type="hidden" name="split[draft_rows][][<%= field %>]" data-draft-field="<%= field %>" value="">
   <% end %>
   </div>

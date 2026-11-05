@@ -5,7 +5,7 @@ class MobileInteractionsTest < ApplicationSystemTestCase
     visit root_path
     enter_bill_amount("100")
     set_people_count(2)
-    click_on "Save split"
+    save_split_and_open_editor
     click_on "Name Person 1"
     fill_in "Find a name", with: "Maya Chen"
     click_on "Add “Maya Chen” as a new person"
@@ -161,7 +161,7 @@ class MobileInteractionsTest < ApplicationSystemTestCase
     visit root_path
     enter_bill_amount("100")
     set_people_count(2)
-    click_on "Save split"
+    save_split_and_open_editor
     click_on "Custom"
     check "Lock Person 1"
     check "Lock Person 2"

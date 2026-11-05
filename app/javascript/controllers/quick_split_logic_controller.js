@@ -6,8 +6,8 @@ import { openSheet, closeSheet } from "sheet_motion"
 export default class extends Controller {
   static targets = ["amount", "peopleCount", "countDisplay", "add", "shares",
     "shareRowTemplate", "centNote", "friend", "remaining", "remainingLabel", "save", "review",
-    "error", "dialog", "connectionName", "connectionHandle", "connectionAmount", "method",
-    "handleFields", "handleLabel", "connectionError"]
+    "error", "dialog", "connectionName", "connectionPhone", "connectionAmount", "method",
+    "handleFields", "connectionError"]
   static values = { minimumPeople: Number, maximumPeople: Number, maximumTotalCents: Number, draft: Array }
 
   connect() {
@@ -94,14 +94,13 @@ export default class extends Controller {
     this.connectionNameTarget.value = row.name || ""
     this.connectionPersonId = row.person_id || ""
     this.connectionOriginalName = row.name || ""
-    this.connectionHandles = {}
     const friend = this.friendTargets.find(button => button.dataset.personId === String(row.person_id))
-    if (friend) this.connectionHandles = {...friend.dataset}
+    this.connectionPhone = friend?.dataset.phoneNumber || ""
     this.methodTargets.forEach(input => { input.checked = input.value === (row.payment_method || "venmo") })
     this.connectionAmountTarget.textContent = this.#money(row.amount_cents)
     this.connectionErrorTarget.hidden = true
     this.changeMethod()
-    if (row.handle) this.connectionHandleTarget.value = row.handle
+    if (row.phone_number) this.connectionPhoneTarget.value = row.phone_number
     this.dialogTarget.querySelector("[data-controller=contact-search-logic]").dispatchEvent(new Event("reset-contact-search"))
     openSheet(this.dialogTarget, {onDismiss: () => this.closeConnection()})
   }
@@ -111,7 +110,7 @@ export default class extends Controller {
     return closeSheet(this.dialogTarget)
   }
   connectionKey(event) {
-    if (event.key === "Enter" && event.target === this.connectionHandleTarget) {
+    if (event.key === "Enter" && event.target === this.connectionPhoneTarget) {
       event.preventDefault()
       this.confirmConnection()
     }
@@ -119,27 +118,27 @@ export default class extends Controller {
   editContact() {
     this.connectionPersonId = ""
     this.connectionOriginalName = ""
-    this.connectionHandles = {}
-    this.connectionHandleTarget.value = ""
+    this.connectionPhone = ""
+    this.connectionPhoneTarget.value = ""
     this.connectionErrorTarget.hidden = true
   }
   selectContact(event) {
     const contact = event.detail
     this.connectionPersonId = contact.id
     this.connectionOriginalName = contact.name
-    this.connectionHandles = contact
+    this.connectionPhone = contact.phoneNumber || ""
     this.changeMethod()
   }
   changeMethod() {
     const method = this.methodTargets.find(input => input.checked).value
+    // Cash is settled in person, so there is nobody to text.
     this.handleFieldsTarget.hidden = method === "cash"
-    this.handleLabelTarget.textContent = {venmo: "Venmo username", cash_app: "Cash App $Cashtag", zelle: "Zelle email or phone", cash: ""}[method]
-    this.connectionHandleTarget.value = this.connectionHandles?.[{cash_app: "cashApp"}[method] || method] || ""
+    this.connectionPhoneTarget.value = this.connectionPhone || ""
   }
   async confirmConnection() {
     const name = this.connectionNameTarget.value.trim()
     const payment_method = this.methodTargets.find(input => input.checked).value
-    const handle = payment_method === "cash" ? "" : this.connectionHandleTarget.value.trim()
+    const phone_number = payment_method === "cash" ? "" : this.connectionPhoneTarget.value.trim()
     if (name !== this.connectionOriginalName || !name) {
       this.connectionErrorTarget.textContent = "Choose a contact or create one from the search."
       this.connectionErrorTarget.hidden = false
@@ -150,12 +149,12 @@ export default class extends Controller {
       this.connectionErrorTarget.hidden = false
       return
     }
-    if (!name || (payment_method !== "cash" && !handle)) {
-      this.connectionErrorTarget.textContent = !name ? "Enter a name." : `Enter ${this.handleLabelTarget.textContent.toLowerCase()}.`
+    if (!name || (payment_method !== "cash" && !phone_number)) {
+      this.connectionErrorTarget.textContent = !name ? "Enter a name." : "Enter a phone number."
       this.connectionErrorTarget.hidden = false
       return
     }
-    Object.assign(this.rows[this.connectionIndex], {name, payment_method, handle,
+    Object.assign(this.rows[this.connectionIndex], {name, payment_method, phone_number,
       person_id: name === this.connectionOriginalName ? this.connectionPersonId : ""})
     await this.closeConnection()
     this.#render()
@@ -186,7 +185,7 @@ export default class extends Controller {
       amountField.value = row.amount_cents / 100
       amountField.dataset.personName = name
       amountField.dataset.maxCents = Math.max(0, this.#remaining() + row.amount_cents)
-      element.querySelector("[data-share-row-connection]").textContent = row.payment_method ? {venmo:"Venmo", cash_app:"Cash App", zelle:"Zelle", cash:"Cash"}[row.payment_method] : "Connect +"
+      element.querySelector("[data-share-row-connection]").textContent = row.payment_method ? {venmo:"Venmo", cash_app:"Cash App", cash:"Cash"}[row.payment_method] : "Connect +"
       element.querySelector(".draft-connect").setAttribute("aria-label", `Connect ${name}`)
       const avatar = element.querySelector("[data-share-row-avatar]")
       const words = name.split(/\s+/)

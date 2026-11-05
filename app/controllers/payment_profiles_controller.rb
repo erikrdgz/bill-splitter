@@ -15,8 +15,9 @@ class PaymentProfilesController < ApplicationController
 
   def update
     if @payment_profile.update(payment_profile_params)
-      render partial: "payment_profiles/payment_profile",
-             locals: { payment_profile: @payment_profile }
+      # The request buttons above depend on these handles, so the whole page is
+      # refreshed rather than just the frame.
+      render turbo_stream: turbo_stream.refresh(request_id: nil)
     else
       render :edit, status: :unprocessable_entity
     end
@@ -29,6 +30,6 @@ class PaymentProfilesController < ApplicationController
   end
 
   def payment_profile_params
-    params.expect(payment_profile: %i[venmo_handle cashapp_cashtag zelle_contact])
+    params.expect(payment_profile: %i[venmo_handle cashapp_cashtag])
   end
 end

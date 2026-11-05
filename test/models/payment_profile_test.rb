@@ -32,11 +32,10 @@ class PaymentProfileTest < ActiveSupport::TestCase
   end
 
   test "a blank handle becomes nil, so nothing downstream sees an empty string" do
-    profile = build(venmo_handle: "", cashapp_cashtag: "  ", zelle_contact: "")
+    profile = build(venmo_handle: "", cashapp_cashtag: "  ")
 
     assert_nil profile.venmo_handle
     assert_nil profile.cashapp_cashtag
-    assert_nil profile.zelle_contact
     assert_not profile.any_payment_handle?
   end
 
@@ -56,12 +55,6 @@ class PaymentProfileTest < ActiveSupport::TestCase
     assert_not build(cashapp_cashtag: "marissa-v").valid?
   end
 
-  test "a Zelle contact must look like an email address or a phone number" do
-    assert build(zelle_contact: "marissa@example.com").valid?
-    assert build(zelle_contact: "+1 (555) 123-4567").valid?
-    assert_not build(zelle_contact: "marissa").valid?
-  end
-
   test "a bad handle says which one it is" do
     profile = build(venmo_handle: "not a username")
 
@@ -76,7 +69,7 @@ class PaymentProfileTest < ActiveSupport::TestCase
 
     assert_equal "erik-r", profile.handle_for(:venmo)
     assert_equal "erikr", profile.handle_for(:cash_app)
-    assert_equal "erik@example.com", profile.handle_for(:zelle)
+    assert_nil profile.handle_for(:zelle)
     assert_nil profile.handle_for(:apple_pay)
   end
 

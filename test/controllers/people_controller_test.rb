@@ -66,13 +66,13 @@ class PeopleControllerTest < ActionDispatch::IntegrationTest
   test "draft contact search matches owned contacts without writing" do
     split = create_split
     person = save_people(split, "Maya Chen", "Jordan Lee").first
-    person.update!(venmo_handle: "maya-preview")
+    person.update!(phone_number: "(555) 555-0101")
     assert_no_difference [ -> { Person.count }, -> { Split.count } ] do
       get search_people_url, params: { query: "MAYA" }, as: :json
     end
     assert_response :success
     assert_equal [ "Maya Chen" ], response.parsed_body.map { |contact| contact["name"] }
-    assert_equal "maya-preview", response.parsed_body.first["venmo"]
+    assert_equal "+15555550101", response.parsed_body.first["phoneNumber"]
   end
 
   test "draft contact search never returns another browser's contacts" do
@@ -156,25 +156,20 @@ class PeopleControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
-  # Payment handles on a saved person.
+  # The phone number a saved person is texted at.
 
-  test "a saved person can be given the handles to ask them for money at" do
+  test "a saved person can be given a phone number to text requests to" do
     split = create_split(amount: "100", people_count: 2)
     person = save_people(split, "Marissa").first
 
-    patch person_url(person), params: { person: {
-      venmo_handle: "@marissa-v", cashapp_cashtag: "$marissa", zelle_contact: "m@example.com"
-    } }, as: :turbo_stream
+    patch person_url(person), params: { person: { phone_number: "(555) 555-0199" } },
+                              as: :turbo_stream
 
     assert_response :success
-    person.reload
-
-    assert_equal "marissa-v", person.venmo_handle
-    assert_equal "marissa", person.cashapp_cashtag
-    assert_equal "m@example.com", person.zelle_contact
+    assert_equal "+15555550199", person.reload.phone_number
   end
 
-  test "the handle form answers inside that person's own frame" do
+  test "the phone form answers inside that person's own frame" do
     split = create_split(amount: "100", people_count: 2)
     person = save_people(split, "Marissa").first
 
@@ -184,35 +179,35 @@ class PeopleControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame##{ActionView::RecordIdentifier.dom_id(person, :payment)}"
   end
 
-  test "a bad handle is refused and the person is left alone" do
+  test "a bad phone number is refused and the person is left alone" do
     split = create_split(amount: "100", people_count: 2)
     person = save_people(split, "Marissa").first
 
-    patch person_url(person), params: { person: { venmo_handle: "not a username" } },
+    patch person_url(person), params: { person: { phone_number: "not a number" } },
                               as: :turbo_stream
 
     assert_response :unprocessable_entity
-    assert_nil person.reload.venmo_handle
+    assert_nil person.reload.phone_number
   end
 
-  # The handle form must not become a back door for renaming somebody.
-  test "the handle form cannot rename a person" do
+  # The phone form must not become a back door for renaming somebody.
+  test "the phone form cannot rename a person" do
     split = create_split(amount: "100", people_count: 2)
     person = save_people(split, "Marissa").first
 
-    patch person_url(person), params: { person: { name: "Someone else", venmo_handle: "m" } },
+    patch person_url(person), params: { person: { name: "Someone else", phone_number: "5555550100" } },
                               as: :turbo_stream
 
     assert_equal "Marissa", person.reload.name
-    assert_equal "m", person.venmo_handle
+    assert_equal "+15555550100", person.phone_number
   end
 
-  test "another browser's person cannot be given handles" do
-    patch person_url(people(:marissa)), params: { person: { venmo_handle: "mine" } },
+  test "another browser's person cannot be given a phone number" do
+    patch person_url(people(:marissa)), params: { person: { phone_number: "5555550100" } },
                                         as: :turbo_stream
 
     assert_response :not_found
-    assert_nil people(:marissa).reload.venmo_handle
+    assert_nil people(:marissa).reload.phone_number
   end
 
   private

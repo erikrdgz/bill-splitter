@@ -22,7 +22,7 @@ class ActionDispatch::IntegrationTest
   def create_split(amount: "100", people_count: 3)
     post splits_url, params: { split: { amount: amount, people_count: people_count } }
 
-    Split.find(response.location[%r{/splits/(\d+)/edit}, 1])
+    Split.find(response.location[%r{/splits/(\d+)}, 1])
   end
 
   # Counts the SELECTs a block runs, so an N+1 can be asserted against rather

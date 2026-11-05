@@ -952,3 +952,46 @@ Capybara read the row before or after a 190ms fade.
 
 It now fades from 0 to 1, and the test asserts the restored row's computed opacity directly
 rather than inferring it from whether the text happened to be readable.
+
+
+## Requests are the saved split's landing page
+
+After creating a split, Rails redirects to its request screen. Unpaid people are actionable
+cards; paid people appear once, below them. The editor has a submit intent for saving and
+returning to requests, so the final action cannot silently discard pending amounts or a title.
+
+The browser's native share sheet is progressive enhancement in CopyLogic; unsupported or
+failed sharing falls back to a selectable, copyable message. A canceled sheet does nothing.
+The message links friends to the payer view, rather than including organizer charge links.
+Payment apps without a request URL expose contact copying and a brief manual instruction.
+No mock actions or developer disclosures appear in the customer interface.
+
+
+## A request is a text with a pay link, and Zelle is gone
+
+Clicking Venmo or Cash App on a friend's row opens a pre-filled text (an `sms:` link) to the
+friend's phone. The text contains a link that opens Venmo or Cash App ready to pay the *organizer*,
+using the organizer's own handle and the friend's amount. Friends therefore need a phone number, not
+a Venmo username: the organizer set the friends up and only chooses a payment method per person.
+
+**Why `sms:` and not an SMS vendor.** Twilio would send from our server, but it needs an account,
+costs money per message, needs sender registration in the US, and would let the app text arbitrary
+numbers. An `sms:` link has none of that: the organizer's own Messages app sends it. The cost is
+that we cannot tell whether it was sent, so "paid" stays a manual confirmation. A vendor is the
+production upgrade, and `PaymentText` is the one place it would plug in.
+
+**Why Zelle was removed.** It has no public API and no link format; it only exists inside banks.
+Showing a "copy this email" box dressed up as an integration was not worth the space.
+
+**Why Cash App is only ever a `:pay` link.** `cash.app/$cashtag/amount` sends money; nothing asks for
+it. That fits this flow exactly, because the friend is the one paying.
+
+**Phone numbers are stored as E.164** (`+15551230101`) and normalized on the way in, so the `sms:`
+link is identical on every phone. Only punctuation is stripped: letters survive to fail validation
+rather than "call me" silently turning into no number.
+
+**Saving the organizer's handles refreshes the page** (a Turbo `refresh` stream) instead of
+replacing one frame, because every request button above depends on them.
+
+**Fake data.** The dev contacts get 555-01xx numbers (reserved for fiction) and the organizer gets
+fake `erik-r` / `erikr` handles, so the whole flow can be clicked through without texting anyone.

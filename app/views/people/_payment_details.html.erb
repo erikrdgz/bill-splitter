@@ -1,23 +1,17 @@
-<%# What we know about where this person can be paid, in a Turbo Frame so the
-    form can take its place without reloading the page.
+<%# The phone number a request is texted to, in a Turbo Frame so the form can
+    take its place without reloading the page.
 
     `participant` is optional. When it is there, saving replaces the whole
-    request row rather than just this frame — a new handle means new buttons
-    beside it, and leaving those stale would be worse than a page reload. %>
+    request row rather than just this frame — a new number means a new button
+    beside it, and leaving that stale would be worse than a page reload. %>
 <turbo-frame id="<%= dom_id(person, :payment) %>" class="block">
-  <% if person.any_payment_handle? %>
-    <p class="text-sm text-muted">
-      <%= PaymentLink::APPS.filter_map { |app|
-            next if person.handle_for(app).blank?
-            "#{PaymentLink::NAMES.fetch(app)} #{person.handle_for(app)}"
-          }.to_sentence %>
-    </p>
-    <%= link_to "Change payment details",
+  <% if person.phone_number.present? %>
+    <%= link_to "Change phone number",
                 edit_person_path(person, participant_id: local_assigns[:participant]&.id),
-                class: "text-sm underline underline-offset-4" %>
+                class: "payment-details-link" %>
   <% else %>
-    <%= link_to "Add payment details",
+    <%= link_to "Add phone number",
                 edit_person_path(person, participant_id: local_assigns[:participant]&.id),
-                class: "text-sm underline underline-offset-4" %>
+                class: "payment-details-link" %>
   <% end %>
 </turbo-frame>
