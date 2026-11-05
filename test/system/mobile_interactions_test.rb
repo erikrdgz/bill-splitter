@@ -214,7 +214,10 @@ class MobileInteractionsTest < ApplicationSystemTestCase
       })()
     JS
     assert_equal styles["symbol"], styles["input"]
-    assert_in_delta styles["viewport"] / 2, styles["center"], 2
+    # The centre depends on how wide the font draws "$" and the placeholder, and
+    # CI's Linux fonts differ from macOS by a few pixels (7px at 375 wide), so
+    # this checks "centred", not "centred to the pixel".
+    assert_in_delta styles["viewport"] / 2, styles["center"], 10
     enter_bill_amount("1000")
     assert_no_selector "dialog[open]"
     assert_equal "none", page.evaluate_script("getComputedStyle(document.querySelector('.bill-amount')).boxShadow")
