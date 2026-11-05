@@ -364,3 +364,73 @@ Two system tests failed by reading the row amounts before Turbo had swapped the 
 page right now. The fix is to wait on something only the new page has — the "Saved." flash, or
 the error message — before reading. Worth remembering, because the failure looks like a
 server-side bug and is not one.
+
+## Step 5 — People search, add, and remove
+
+### One template serves both frames
+
+`people#index` renders the row's name frame with the results frame nested inside it. Opening
+the picker targets the outer frame; typing targets the inner one. Turbo takes whichever frame
+it asked for out of the same response.
+
+**Why this matters:** the obvious alternative is two endpoints — one for the picker, one for
+"just the results" — which are then two templates to keep in step. Nesting them means the
+search box and the list it controls can never disagree about what they are showing.
+
+### Picking a name is a real request, not client-side state
+
+A result is a `PATCH` to the participant that answers with the row's name frame. Nothing is
+held in JavaScript between opening the picker and saving.
+
+**Alternative:** have Stimulus write the chosen id into a hidden field and let the editor form
+carry it. Rejected because the row would then show a name the database does not have yet, and
+every other action on the page (adding a row, removing one) would have to know to preserve
+that pending edit.
+
+### Adding a person is one route, not two
+
+"Add [name] as a new person" saves the `Person` and puts it on the row in a single `POST
+/people`. It is one decision for the organizer, so it is one request and one undo.
+
+### Participants are a Turbo Stream, names are a Turbo Frame
+
+Adding or removing a row moves money in every other row, so those answer with streams that
+redraw the list and the remaining total together. Naming a row changes one name and nothing
+else, so that answers with a frame.
+
+**The rule:** a frame when one region changes, a stream when several do.
+
+### The stream replaces the whole list rather than appending one row
+
+The spec describes appending the new row and then updating every amount. Redrawing the list as
+one action does the same thing in one place. A dozen targeted actions can half-apply and leave
+rows that do not add up on screen; one replace cannot. The spec's test — that the response
+includes the new row — still passes.
+
+### Removing a row renumbers the positions
+
+Positions are what placeholders are named from, so removing the second of four would leave
+"Person 1, Person 3, Person 4" on screen. `renumber_positions` assigns 1..n in ascending order,
+which is safe against the unique index on `(split_id, position)`: each row moves down into a
+slot the row before it has already left. `update_all` would not be safe — it gives no order
+guarantee, and a descending pass would collide.
+
+### The limits are enforced in the markup and again in the controller
+
+The remove buttons are disabled at two people and "Add a person" is disabled at twenty, so the
+screen says what is allowed. `ParticipantsController` refuses both anyway, because a disabled
+button is a courtesy and not a control.
+
+### Debounce is the only thing Stimulus does here
+
+`PeopleSearchLogic` waits 250 ms and calls `requestSubmit`. The searching, matching and
+rendering are all the server's. Submitting per keystroke would also let a slow response land
+after a fast one and leave the list showing the wrong query.
+
+`requestSubmit` rather than `submit`, because only `requestSubmit` fires the submit event, and
+that event is how Turbo knows to put the response in the frame instead of the page.
+
+### A note on Capybara: `click_on` matches links and buttons
+
+A row named "Marissa" is a link reading "Marissa", and a picker result is a button reading
+"Marissa". `click_on` found both. `click_button` and `click_link` say which one is meant.

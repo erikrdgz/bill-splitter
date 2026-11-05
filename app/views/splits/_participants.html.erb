@@ -1,0 +1,13 @@
+<%# The whole list is one Turbo Stream target. Adding or removing a row moves
+    money in every other row, so redrawing the list as a unit is one action that
+    cannot leave the rows and the amounts disagreeing — where appending the new
+    row and then patching each other row would be a dozen actions that can. %>
+<ol id="participants">
+  <%= render partial: "participants/participant_row",
+             collection: split.participants,
+             as: :participant,
+             locals: {
+               split: split,
+               removable: split.participants.size > SplitMath::PEOPLE_RANGE.min
+             } %>
+</ol>

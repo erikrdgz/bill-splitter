@@ -23,11 +23,7 @@
       itself on a desktop. Black and white only until the design pass lands. %>
   <body class="bg-white text-black antialiased">
     <main class="mx-auto w-full max-w-md px-4 py-10">
-      <%# role="status" rather than an alert: a save confirmation is news, not a
-          problem, and a screen reader should hear it without being interrupted. %>
-      <% if flash[:notice] %>
-        <p role="status" class="mb-6 border-2 border-black px-4 py-3"><%= flash[:notice] %></p>
-      <% end %>
+      <%= render "shared/flash", message: flash[:notice] %>
 
       <%= yield %>
     </main>

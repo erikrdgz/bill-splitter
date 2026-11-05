@@ -1,0 +1,32 @@
+<%# Three states, as the spec asks: no saved people yet, no matches, and results.
+    They read differently on purpose — "you have not saved anyone" is a
+    different situation from "nobody is called that". %>
+<% exact_match = people.any? { |person| person.name.casecmp?(query.to_s.strip) } %>
+
+<ul class="mt-3">
+  <%= render partial: "people/person_result",
+             collection: people,
+             as: :person,
+             locals: { participant: participant } %>
+</ul>
+
+<% if people.empty? %>
+  <p class="mt-3 text-sm text-black/70">
+    <%= query.present? ? "No saved name matches “#{query}”." : "No saved names yet." %>
+  </p>
+<% end %>
+
+<% if query.present? && !exact_match %>
+  <%# One request, not two: saves the name for next time and puts it on this row. %>
+  <%= form_with url: people_path, method: :post, class: "mt-3",
+                data: { turbo_frame: dom_id(participant, :name) } do |form| %>
+    <%= form.hidden_field :participant_id, value: participant.id %>
+    <%= form.hidden_field "person[name]", value: query.strip %>
+    <%= form.submit "Add “#{query.strip}” as a new person",
+                    class: "w-full border-2 border-black px-3 py-2 text-sm font-medium" %>
+  <% end %>
+<% end %>
+
+<% if @person&.errors&.any? %>
+  <p class="mt-2 text-sm" role="alert"><%= @person.errors.full_messages.to_sentence %></p>
+<% end %>

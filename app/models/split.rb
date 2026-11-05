@@ -63,6 +63,17 @@ class Split < ApplicationRecord
     participants.each_with_index { |participant, index| participant.amount_cents = shares[index] }
   end
 
+  # Positions have to stay 1, 2, 3... with no gaps: placeholders are named from
+  # them ("Person 3"), and rule 2 hands the leftover cent to the first rows.
+  # Removing the second of four would otherwise leave 1, 3, 4.
+  #
+  # Assigning in ascending order is safe against the unique index on
+  # (split_id, position): each row moves down into a slot the row before it has
+  # already left.
+  def renumber_positions
+    participants.each_with_index { |participant, index| participant.position = index + 1 }
+  end
+
   # What the editor shows as "remaining". Added up in Ruby, not SQL, so it is
   # right for amounts the organizer has changed but not yet saved.
   def remaining_cents

@@ -3,7 +3,12 @@ Rails.application.routes.draw do
   # and arithmetic.
   root "splits#new"
 
-  resources :splits, only: %i[create edit update]
+  resources :splits, only: %i[create edit update] do
+    resources :participants, only: %i[create update destroy]
+  end
+
+  # index is the search behind the people picker.
+  resources :people, only: %i[index create]
 
   # Returns 200 if the app boots with no exceptions. Used by hosts and uptime
   # monitors.

@@ -1,0 +1,11 @@
+<%# The name half of a row, in its own Turbo Frame so the picker can take its
+    place without disturbing the amount beside it.
+
+    The link navigates this frame — Turbo pulls the matching frame out of the
+    people#index response — so opening the picker costs no JavaScript at all. %>
+<turbo-frame id="<%= dom_id(participant, :name) %>" class="block">
+  <%= link_to participant.display_name,
+              people_path(participant_id: participant.id),
+              class: "underline decoration-black/30 underline-offset-4",
+              aria: { label: "Name #{participant.display_name}" } %>
+</turbo-frame>

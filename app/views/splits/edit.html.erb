@@ -2,6 +2,9 @@
 
 <h1 class="text-2xl font-semibold tracking-tight">Edit split</h1>
 
+<%# The title and total are one form. The rows are not inside it: adding,
+    naming and removing a person are each their own request, and a form cannot
+    be nested inside another form. %>
 <%= form_with model: @split, class: "mt-8" do |form| %>
   <%= render "shared/errors", record: @split %>
 
@@ -25,17 +28,19 @@
     </div>
   </div>
 
-  <section class="mt-10">
-    <h2 class="font-medium">Each person pays</h2>
-    <ol class="mt-2" id="participants">
-      <%= render partial: "participants/participant_row",
-                 collection: @split.participants, as: :participant %>
-    </ol>
-
-    <%= render "splits/remaining", split: @split %>
-  </section>
-
   <%= form.submit "Save",
-                  class: "mt-10 w-full border-2 border-black bg-black px-4 py-3 " \
+                  class: "mt-6 w-full border-2 border-black bg-black px-4 py-3 " \
                          "font-medium text-white" %>
 <% end %>
+
+<section class="mt-12">
+  <h2 class="font-medium">Each person pays</h2>
+
+  <%= render "splits/participants", split: @split %>
+  <%= render "splits/remaining", split: @split %>
+
+  <%= button_to "Add a person", split_participants_path(@split),
+                disabled: @split.participants.size >= SplitMath::PEOPLE_RANGE.max,
+                class: "mt-6 w-full border-2 border-black px-4 py-3 font-medium " \
+                       "disabled:border-black/25 disabled:text-black/25" %>
+</section>

@@ -3,15 +3,29 @@
     shown to one decimal, per rule 5 — it is never added back up.
 
     dom_id gives the row a stable id (participant_42) so a Turbo Stream can
-    replace or remove exactly this row later. %>
+    replace or remove exactly this row. %>
 <li id="<%= dom_id(participant) %>"
-    class="flex items-baseline justify-between gap-4 border-t border-black/20 py-3">
-  <span><%= participant.display_name %></span>
+    class="flex items-baseline justify-between gap-3 border-t border-black/20 py-3">
+  <%= render "participants/participant_name", participant: participant, split: split %>
 
-  <span class="flex items-baseline gap-3">
-    <span class="text-sm text-black/60 tabular-nums">
+  <span class="flex shrink-0 items-baseline gap-3">
+    <span class="text-sm tabular-nums text-black/60">
       <%= number_with_precision(participant.percentage, precision: 1) %>%
     </span>
-    <span class="font-medium tabular-nums"><%= money(participant.amount_cents) %></span>
+    <span class="w-20 text-right font-medium tabular-nums">
+      <%= money(participant.amount_cents) %>
+    </span>
+
+    <%# Disabled rather than hidden at the minimum, so the control does not move
+        around as rows come and go. The controller refuses it too. %>
+    <%= button_to split_participant_path(split, participant),
+                  method: :delete,
+                  disabled: !removable,
+                  class: "size-8 border border-black/40 text-sm leading-none " \
+                         "disabled:border-black/15 disabled:text-black/25",
+                  aria: { label: "Remove #{participant.display_name}" },
+                  form: { data: { turbo_confirm: "Remove #{participant.display_name}?" } } do %>
+      &times;
+    <% end %>
   </span>
 </li>

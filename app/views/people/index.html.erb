@@ -1,0 +1,39 @@
+<%# Two nested frames in one template.
+
+    Opening the picker targets the outer frame (the row's name), so this whole
+    block replaces the name. Typing targets the inner frame (the results), so
+    only the list below the search box is replaced. Turbo takes the frame it
+    was asked for out of the same response, which is why there is no separate
+    endpoint for "just the results" to drift out of step. %>
+<turbo-frame id="<%= dom_id(@participant, :name) %>" class="block">
+  <div class="border-2 border-black p-3">
+    <%= form_with url: people_path, method: :get,
+                  data: {
+                    controller: "people-search-logic",
+                    turbo_frame: "people_results"
+                  } do |form| %>
+      <%= form.hidden_field :participant_id, value: @participant.id %>
+      <%= form.label :query, "Find a name", class: "block text-sm font-medium" %>
+      <%= form.search_field :query,
+                            value: @query,
+                            autofocus: true,
+                            autocomplete: "off",
+                            placeholder: "Start typing",
+                            class: "mt-1 w-full border-b-2 border-black bg-transparent py-1 " \
+                                   "focus:outline-none",
+                            data: { action: "input->people-search-logic#search" } %>
+      <%# Without JavaScript this is still a working search form. %>
+      <noscript><%= form.submit "Search", class: "mt-2 border-2 border-black px-3 py-1" %></noscript>
+    <% end %>
+
+    <turbo-frame id="people_results" class="block">
+      <%= render "people/results", people: @people, participant: @participant, query: @query %>
+    </turbo-frame>
+
+    <%# _top, because cancelling should put the whole editor back rather than
+        leave a lone row re-rendered inside a frame. %>
+    <%= link_to "Cancel", edit_split_path(@split),
+                class: "mt-3 inline-block text-sm underline underline-offset-4",
+                data: { turbo_frame: "_top" } %>
+  </div>
+</turbo-frame>
