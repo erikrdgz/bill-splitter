@@ -46,9 +46,9 @@ class HistoriesTest < ApplicationSystemTestCase
   test "history is reachable from every screen" do
     visit root_path
 
-    click_on "Your splits"
+    click_on "History"
 
-    assert_selector "h1", text: "Your splits"
+    assert_selector "h1", text: "History"
   end
 
   test "once everyone has paid history says so instead of a figure" do
