@@ -66,12 +66,8 @@ class HistoriesTest < ApplicationSystemTestCase
     visit root_path
     enter_bill_amount(amount)
     set_people_count(people_count)
-    save_split_and_open_editor
-    assert_selector "h1", text: "Edit split"
-
-    fill_in "What was it for?", with: title
-    click_on "Save name and total"
-    assert_text "Saved."
+    edit_bill_details(title: title)
+    save_split
 
     Split.find(current_url[%r{/splits/(\d+)}, 1])
   end

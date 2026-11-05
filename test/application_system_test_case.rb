@@ -23,11 +23,79 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
 
   private
 
+  # Saving is the last of three steps: bill, people, review. The people step
+  # refuses to go on until every row is connected, so a test that only cares
+  # about the money connects everyone with cash first.
   def save_split_and_open_editor
-    click_on "Save split"
-    assert_selector "h1", text: "Send requests"
+    save_split
     click_on "Edit split"
     assert_selector "h1", text: "Edit split"
+  end
+
+  def save_split
+    connect_everyone_with_cash
+    click_on "Next"
+    click_on "Save split"
+    assert_selector "h1", text: "Send requests"
+  end
+
+  # Cash needs no handle, so it is the quickest way to make a row real. Rows
+  # that are already connected are skipped, which lets a test connect the
+  # one or two people it cares about and leave the rest to this.
+  def connect_everyone_with_cash
+    start_group
+    count = find("input[data-quick-split-logic-target=peopleCount]", visible: :all).value.to_i
+    (1..count).each do |position|
+      next unless has_button?("Connect Person #{position}", wait: 0)
+
+      connect_person("Person #{position}", "Guest #{position}")
+    end
+  end
+
+  # Creates a brand-new contact from the search box and connects the row to it.
+  # Anything but cash needs a phone number to text the pay link to.
+  def connect_person(row_label, name, method: "cash", phone: nil)
+    # The group view fades in just after "Split up", and a click that lands
+    # mid-fade can be swallowed, so ask again if the sheet did not open.
+    2.times do
+      click_on "Connect #{row_label}"
+      break if has_selector?("dialog[open]", wait: 2)
+    end
+    fill_in "Name", with: name
+    # An earlier split in the same test may already have saved this name, in
+    # which case the search offers the contact itself instead of "Create".
+    find("[role=option]", text: /#{Regexp.escape(name)}”?\z/).click
+    choose Participant::PAYMENT_METHODS.fetch(method), allow_label_click: true
+    fill_in "Phone number", with: phone if phone
+    click_on "Connect", exact: true
+    assert_button "Connect #{name}"
+  end
+
+  # Fills in the bill, sets the head count, saves, and reopens the saved split
+  # in the composer. The editor and the new-split screen are the same form, so
+  # this is the quickest way to a split that is already in the database.
+  def open_editor_for(amount, people_count)
+    visit root_path
+    enter_bill_amount(amount)
+    set_people_count(people_count)
+    save_split_and_open_editor
+  end
+
+  # Opens the bill header in the composer, changes what was asked for, and
+  # closes it again. Works the same on a new split and a saved one.
+  def edit_bill_details(title: nil, amount: nil)
+    click_on "Edit bill details"
+    fill_in "What's this for?", with: title if title
+    # enter_bill_amount closes the header itself once it has set the amount.
+    amount ? enter_bill_amount(amount) : click_on("Done editing bill")
+  end
+
+  # Only the live rows, never the <template> beside them: a real browser keeps
+  # template content out of the document, so this selector cannot see it.
+  def share_amounts
+    count = find("[data-quick-split-logic-target=peopleCount]", visible: :all).value.to_i
+    assert_selector "ol[data-quick-split-logic-target=shares] > li", count: count
+    all("ol[data-quick-split-logic-target='shares'] > li [data-share-row-amount]").map(&:text)
   end
 
   def enter_bill_amount(amount, label: "Amount")

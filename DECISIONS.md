@@ -957,14 +957,14 @@ rather than inferring it from whether the text happened to be readable.
 ## Requests are the saved split's landing page
 
 After creating a split, Rails redirects to its request screen. Unpaid people are actionable
-cards; paid people appear once, below them. The editor has a submit intent for saving and
-returning to requests, so the final action cannot silently discard pending amounts or a title.
+cards; paid people appear once, below them. The message links friends to the payer view, rather
+than including organizer charge links. No mock actions or developer disclosures appear in the
+customer interface.
 
-The browser's native share sheet is progressive enhancement in CopyLogic; unsupported or
-failed sharing falls back to a selectable, copyable message. A canceled sheet does nothing.
-The message links friends to the payer view, rather than including organizer charge links.
-Payment apps without a request URL expose contact copying and a brief manual instruction.
-No mock actions or developer disclosures appear in the customer interface.
+*Superseded 2026-11-05: the editor's "Save and view requests" intent and the native share sheet
+are gone. Edit is now the composer (see "Editing a saved split reopens the composer"), and
+"Share requests" copies the message and shows a recap (see "Share requests ends on a Shared!
+recap").*
 
 
 ## A request is a text with a pay link, and Zelle is gone
@@ -1049,3 +1049,52 @@ connected (cash counts, so there is no Venmo or Cash App requirement), then open
 step that holds Save split and Request split. SplitDraft refuses unconnected rows too, so a
 forged request cannot skip the rule. The keypad keys live in one partial shared by the inline
 keypad and the amount dialogs, so the layouts cannot drift apart.
+
+## Share requests ends on a Shared! recap, not a share sheet
+
+`navigator.share` opens the phone's share sheet, which is a second way to send the same thing
+the per-person Text buttons already send, and it cannot tell us whether anything was sent. So
+`CopyLogic#share` now copies the group message (best effort) and reveals a plain, server-rendered
+**Shared!** recap already on the page: total, people requested, still owed, what you pay, and each
+person's amount. Close is an ordinary link home. Nothing is marked paid and nothing claims a
+message was sent, which keeps the rule that "paid" is a manual confirmation. The recap is in the
+HTML from the start and only unhidden, so there is no round trip and no template in JavaScript.
+
+## The system tests follow the composer, and some tests went away
+
+Edit used to be its own screen, so a third of the system suite drove controls that no longer
+exist: "Name Person 1", "Find a name", "Save name and total", "Save amounts", Even/Custom, the
+lock checkboxes, and the Turbo Streams behind add and remove. Those were rewritten as the
+composer equivalents (Connect sheet, sliders, Split evenly, Next, Save split) rather than patched
+to pass, so each test still says what the user does.
+
+Three things were deleted instead of ported, because the behavior is gone, not moved:
+the device share sheet tests (replaced by a recap test), "a row with nobody named says what to
+do about it" (an unconnected row can no longer be saved), and "a refused saved swipe restores
+the card" (removing a card is local to the draft, so the server never refuses it).
+
+The controller tests changed for the same reason. `PATCH /splits/:id` takes the whole draft, so
+the old nested-attributes and `split_mode` tests became `draft_rows` tests, and the "row from
+another split" test now proves what actually protects it: an id is only used to remember who has
+paid, so a foreign id changes nothing in that split and carries no paid time over.
+
+Shared test helpers (`save_split`, `connect_person`, `connect_everyone_with_cash`,
+`edit_bill_details`, `open_editor_for`, `share_amounts`) live in `ApplicationSystemTestCase`.
+A test that only cares about money connects everyone with cash, the quickest way past the rule
+that every person must be connected.
+
+Two timing flakes showed up only under parallel browsers and were fixed at the helper rather
+than by retrying tests: `connect_person` re-clicks if the sheet did not open (a click that lands
+while the group view is fading in can be swallowed), and the swipe auto-close in tests is 800ms
+instead of 200ms so the test can look at the open card before the timer closes it.
+
+## Still open
+
+- Editing the total of a saved split leaves the old shares in place until **Split evenly** is
+  tapped, because a reopened split is treated as custom. That is consistent, but a lowered total
+  looks like an error ("Over the bill by") instead of a respread.
+- A total smaller than the head count can reach Review (Next only checks "over the bill"), and
+  Save then does nothing visible because the in-browser check's message sits on the hidden
+  people step. The server and the browser both refuse it; the message is just not shown.
+- The old row editor's controller, views and `SplitLogic` are unreferenced. Removing them is a
+  separate, behavior-free cleanup.

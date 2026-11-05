@@ -23,9 +23,9 @@ session turns those into Tailwind v4 tokens and ERB views.
 
 ## Product summary
 
-A mobile-first web app that splits a bill in seconds. Enter an amount, set how many people,
-and see each share. From there it can grow into a named split with custom amounts and a link
-friends open to mark themselves paid.
+A mobile-first web app that splits a bill in seconds. Enter an amount and a title, add the
+people, and see each share. From there it grows into a connected split with custom amounts, a
+text per friend with a link to pay you, and a link friends open to mark themselves paid.
 
 ### Why it exists
 
@@ -47,12 +47,12 @@ Five features, each small on its own, that together feel like a finished product
 
 | Feature | What it does | Done when |
 | --- | --- | --- |
-| Quick split | Amount plus Add and a read-only people count shows each share instantly. No sign-up. | $100 for 3 people shows $33.34, $33.33, $33.33, and the shares always add up to the total. |
-| Name the people | Each placeholder ("Person 3") can become a saved person through search-as-you-type, or a new name added on the spot. | Searching "ma" narrows to matching saved names. A new name is saved for next time. |
-| Custom split | Adjust any person's share. The leftover spreads evenly across people you haven't touched, and touched people lock. | The shares can never come to more than the total. A remaining amount is always visible, and it is the part the organizer pays themselves. The server rejects a split whose shares exceed the total. |
+| Quick split | Amount, title and an Add person button with a read-only people count show each share instantly. No sign-up. | $100 for 3 people shows $33.34, $33.33, $33.33, and the shares always add up to the total. |
+| Connect the people | Each placeholder ("Person 3") is connected to a saved contact through search-as-you-type, a recent friend, or a new name created on the spot, and given a way to pay: Venmo, Cash App or cash. Everyone must be connected before a split can be reviewed or saved. | Searching "ma" narrows to matching saved names. A new name is saved for next time. A split with an unconnected person is refused by the browser and by the server. |
+| Custom split | Adjust any person's share by slider, percentage or keypad. Setting a share holds it; Split evenly gives every row back to the spread. | The shares can never come to more than the total. A remaining amount is always visible, and it is the part the organizer pays themselves. The server rejects a split whose shares exceed the total. |
 | Share link | One public link per split. A friend opens it, sees what they owe, and taps "I paid." | The link works without an account. The organizer sees who has paid. A wrong link shows a not-found page. |
 | History | The organizer's past splits, each with its total and how much is still owed. | Splits list newest first. An empty history invites starting a split. |
-| Ask for the money | Each saved person can hold a Venmo username, Cash App $Cashtag or Zelle contact, and the organizer can hold their own. The split then offers a request per person, and the share page offers a way to pay. | A person with a Venmo username gets a real link that opens Venmo with the amount filled in. Apps that cannot carry a request from a web page say so rather than pretending. One message holds every outstanding share, to paste into a group chat. |
+| Ask for the money | Each connected person holds a phone number and the way they will pay (Venmo, Cash App or cash); the organizer saves their own Venmo username and Cash App $Cashtag. The split then offers a text per person containing a link to pay the organizer, and the share page offers the same link. | A Venmo or Cash App friend gets a text that opens the right app with the amount filled in. Cash says "Paying in cash". One message holds every outstanding share, to paste into a group chat. |
 
 ## User flow
 
@@ -61,17 +61,20 @@ people, adjust amounts, share, and track who paid.
 
 ## Screens and interface requirements
 
-Six screens. This section lists what each one must contain and do; the look is the design
-chat's call.
+Six screens, the first three being steps of one composer. This section lists what each one
+must contain and do; the look is the design chat's call.
 
 | Screen | Must contain | States to design | Interactions |
 | --- | --- | --- | --- |
-| Quick split (home) | Amount keypad, read-only people count, each person's share, a note when one person pays a cent more, an Add action, per-person Connect, custom sliders, and organizer remainder | No amount yet; 0 people in a new draft; 20 people (maximum) | Share updates on every keystroke and tap, no waiting. Add grows the group; swipe a card left to remove. A card swiped part-way open waits five seconds for a tap and then springs shut on its own, unless the keyboard is inside it. |
-| Split editor | Title, total, a row per person (name or placeholder, amount, percent, slider, lock), add person, remove person, Even / Custom switch, remaining amount, Share action | Even mode; Custom mode mid-edit; error when the total doesn't add up; a row being added or removed | Dragging one slider sets that row only; everyone else stays put. Touched rows lock; tapping the lock frees them for "Spread the rest evenly". Saving is refused only when requested shares exceed the bill. |
-| People search | Search field, matching saved people, "Add [name] as new person" when nothing matches | No saved people yet; no matches; results | Results narrow as you type. Picking a person fills the row. |
+| Bill (composer step 1, home) | Amount with an inline keypad, a title, and Split up | No amount or title yet (Split up disabled) | The keypad updates the amount as you tap. Split up needs a positive amount and a title. |
+| People (composer step 2) | Read-only bill header with an edit control, the people count, each person's share, a note when one person pays a cent more, Split evenly, per-person Connect, sliders, percentage and keypad amount, Add person, You pay, Next | 0 people in a new draft; someone not yet connected (Next disabled); over the bill (Next disabled); 20 people (maximum) | Share updates on every keystroke and tap, no waiting. Add person grows the group; swipe a card left to remove. A card swiped part-way open waits five seconds for a tap and then springs shut on its own, unless the keyboard is inside it. Dragging one slider sets that row only; everyone else stays put. Saving is refused only when requested shares exceed the bill. |
+| Review (composer step 3) | Each person with their payment method and amount, You pay, Request split, Save split, a way back | Any valid draft | Both actions submit the draft. Nothing is written before this. |
+| Send requests (split detail) | Bill title, total and people count; a request per unpaid person; Share requests; paid people below; the organizer's own payment details; the split link; Edit | Nothing paid; partly paid; fully paid ("All settled") | Each request is a text with a pay link. Share requests copies the group message and shows a Shared! recap with Close. |
 | Share page (friend view) | Split title, total, each person and their amount, an "I paid" action on each unpaid row | Nobody paid; some paid; all paid; link not found | Tapping "I paid" asks to confirm the name, then marks it. No login. |
-| Split detail (organizer) | Who has paid and who hasn't, amount still owed, copy-link action, edit action | Nothing paid; partly paid; fully paid | Copy link confirms it copied. |
 | History | Each split's title, date, total, and amount still owed | Empty; a few splits; many | Tapping a split opens its detail. |
+
+Editing a saved split reopens the composer on the People step with the saved rows; it is not a
+separate screen. Searching and creating contacts happens in the Connect sheet on each person.
 
 ### Constraints for the design
 
@@ -92,10 +95,11 @@ The server always has the final say.
 1. **Whole cents only.** $100.00 is stored as `10000`. No floating-point money anywhere.
 2. **Even split.** Each person gets `total ÷ people`, rounded down. The leftover cents go one
    each to the first people in list order. $100 for 3 people: 3334, 3333, 3333.
-3. **Custom split.** Setting someone's amount sets that row and locks it. Everyone else keeps
+3. **Custom split.** Setting someone's amount sets that row and holds it. Everyone else keeps
    what they already have — nothing is re-evened out from under the organizer — so money freed
-   up by lowering one row is theirs to hand out. "Spread the rest evenly" gives each unlocked
-   row an equal share of whatever the locked rows leave, using rule 2.
+   up by lowering one row is theirs to hand out. **Split evenly** gives every row an equal
+   share of the whole bill, using rule 2, and frees them all. A saved split is custom exactly
+   when at least one row is held; the hold is stored but nothing in the UI shows it.
 
    *Revised 2026-11-05. The original rule re-evened every unlocked row on each change, which
    undid allocations the organizer had already made: dropping one person of 20/30/50 to zero
@@ -113,7 +117,7 @@ The server always has the final say.
    should move nothing but that share and the remaining figure.*
 5. **Cents are the source of truth.** Percentages are derived from cents. Editing a draft
    percentage converts it to whole cents and applies the same ceiling as dragging.
-6. **Limits.** A draft starts with 0 people; saved splits have 1 to 20 people. The total is at least 1 cent per person and at most $99,999.99.
+6. **Limits.** A draft starts with 0 people; saved splits have 1 to 20 people, and every one of them is connected. The total is at least 1 cent per person and at most $99,999.99.
    No negative amounts.
 
    On a rejected total reduction, the sliders temporarily share a range large enough to display the existing amounts unchanged. The over-bill state blocks saving until corrected.
@@ -128,8 +132,8 @@ saved `Person`, or stay an unnamed placeholder.
 | Table | Columns | Validations and notes |
 | --- | --- | --- |
 | splits | `title` (string), `total_cents` (integer), `split_mode` (even or custom), `share_token` (string, unique), `owner_token` (string), timestamps | Title required, 80 characters max. Total above 0 and at most 9,999,999. Participants add up to the total. `has_secure_token :share_token` makes the link hard to guess. |
-| participants | `split_id`, `person_id` (optional), `position` (integer), `amount_cents` (integer), `locked` (boolean), `paid_at` (datetime, empty until paid), timestamps | 1 to 20 per saved split. Amount 0 or more. `position` sets list order and who gets the leftover cent. A placeholder shows "Person 3" from its position. |
-| people | `name` (string), `owner_token` (string), timestamps | Name required, 40 characters max, unique per owner. Searched by name for the people picker. |
+| participants | `split_id`, `person_id` (optional), `position` (integer), `amount_cents` (integer), `payment_method` (venmo, cash_app or cash), `locked` (boolean), `paid_at` (datetime, empty until paid), timestamps | 1 to 20 per saved split. Amount 0 or more. `position` sets list order and who gets the leftover cent. A placeholder shows "Person 3" from its position. |
+| people | `name` (string), `phone_number` (E.164, optional), payment handles, `owner_token` (string), timestamps | Name required, 40 characters max, unique per owner. Searched by name for the people picker. |
 
 ### Associations
 
@@ -150,12 +154,11 @@ the server can: the quick split math, the sliders, and debouncing the search.
 
 | Interaction | Hotwire tool | Request | Controller |
 | --- | --- | --- | --- |
-| Quick split shares update as you type | Stimulus only (`QuickSplitLogic`) | none | none |
-| Save a quick split | Turbo Drive, then redirect to requests | `POST /splits` | `SplitsController#create` |
-| Search saved people | Stimulus debounce + Turbo Frame `people_results` | `GET /people?query=ma` | `PeopleController#index` |
-| Add a person to a split | Turbo Stream: append the row, update every amount and the remaining total | `POST /splits/:id/participants` | `ParticipantsController#create` |
-| Remove a person | Turbo Stream: remove the row, update amounts | `DELETE /splits/:id/participants/:id` | `ParticipantsController#destroy` |
-| Drag a custom-split slider | Stimulus (`SplitLogic`) sets that row and updates the remaining total; saved when the organizer presses Save | `PATCH /splits/:id` | `SplitsController#update` |
+| Shares update as you type, add and remove people, connect, review | Stimulus only (`QuickSplitLogic`, `SplitFlowLogic`) | none | none |
+| Save a split or request it | Turbo Drive, then redirect to requests | `POST /splits` | `SplitsController#create` (via `SplitDraft`) |
+| Edit a saved split | The same composer, submitted again | `GET /splits/:id/edit`, `PATCH /splits/:id` | `SplitsController#edit`, `#update` (via `SplitDraft`) |
+| Search saved people | Stimulus debounce, JSON | `GET /people/search?query=ma` | `PeopleController#search` |
+| Change a friend's phone number | Turbo Frame in the request row | `GET/PATCH /people/:id` | `PeopleController#edit`, `#update` |
 | Open the share link | Turbo Drive page, no login | `GET /s/:share_token` | `SharesController#show` |
 | Friend taps "I paid" | Turbo Stream: replace that row | `POST /s/:share_token/participants/:id/payment` | `PaymentsController#create` |
 | History | Turbo Drive page | `GET /splits` | `SplitsController#index` |
@@ -164,9 +167,11 @@ the server can: the quick split math, the sliders, and debouncing the search.
 Rails.application.routes.draw do
   root "splits#new"                         # the quick split
   resources :splits, only: %i[index create show edit update] do
-    resources :participants, only: %i[create destroy]
+    resources :participants, only: %i[create update destroy]  # old row editor; no screen uses it now
   end
-  resources :people, only: %i[index create show edit update]  # index = search
+  resources :people, only: %i[index create show edit update] do
+    get :search, on: :collection                              # the Connect sheet's search
+  end
   resource :payment_profile, only: %i[show edit update]      # how the organizer gets paid
 
   # Public share link
@@ -176,8 +181,11 @@ Rails.application.routes.draw do
 end
 ```
 
-`SplitsController#update` saves amounts with one call to `SplitMath`, so the browser and
-server can never disagree for long: if they do, the server's version replaces the rows.
+`SplitsController#create` and `#update` both go through `SplitDraft`: the browser posts every
+row (person, payment method, amount, held or not, and the participant id when it already
+exists), and the server rebuilds the rows, redoes even shares with `SplitMath`, and refuses a
+split that exceeds its total or has an unconnected person. A row's id is used only to remember
+who has already paid; an id from another split is ignored.
 
 ## Asking for the money
 
@@ -188,10 +196,13 @@ supported: the organizer asking each friend, and a friend paying the organizer.
 
 | App | Request (organizer → friend) | Pay (friend → organizer) |
 | --- | --- | --- |
-| Venmo | Real link. `https://venmo.com/<user>?txn=charge&amount=&note=` is Venmo's own documented format. | Real link, `txn=pay`. |
-| Cash App | Demonstration. A Cash App link can send money but cannot ask for it. | Real link, `https://cash.app/$<cashtag>/<amount>`. |
-| Zelle | Demonstration. Zelle has no public link format; it lives inside each bank's app. | Demonstration. |
-| Apple Pay | Demonstration. Needs a merchant account and a payment processor. | Demonstration. |
+| Venmo | A text containing a Venmo link that opens ready to pay the organizer. | Real link, `https://venmo.com/<user>?txn=pay&amount=&note=`. |
+| Cash App | A text containing a Cash App link that opens ready to pay the organizer. | Real link, `https://cash.app/$<cashtag>/<amount>`. |
+| Cash | "Paying in cash". Nothing is sent. | Nothing to open; the friend confirms on the share page. |
+
+*Revised 2026-11-05: Zelle and Apple Pay were dropped (no public link format, no merchant
+account), and the "demonstration" panels below went with them. The paragraph below is kept as
+the reasoning for why nothing fake is shown.*
 
 A demonstration is a disclosure that shows exactly what would be sent, says why it cannot be
 sent from a web page, and states that nothing has been. Nothing is dressed up as working when
@@ -223,11 +234,13 @@ expects the class name to match the table.
 - `SplitMath`: $100 for 3 people gives 3334, 3333, 3333.
 - `SplitMath`: for 1,000 random totals and head counts, the shares always add up to the total.
 - `SplitMath`: custom split respects locked rows and never goes negative.
-- `Split`: invalid when participants don't add up to the total, or with fewer than 2 or more
-  than 20 people.
+- `Split`: invalid when participants exceed the total, or with fewer than 1 or more than 20
+  people.
 - `Split`: a share token is created on save.
 - Creating a split from the quick split form redirects to requests.
-- Adding a participant answers with a Turbo Stream that includes the new row.
+- Saving a draft with an unconnected person is refused and writes nothing.
+- Editing a saved split replaces its rows, keeps who has paid, and ignores a row id that belongs
+  to another split.
 - The share page loads by token; a wrong token returns 404.
 - "I paid" sets `paid_at` on that participant only.
 - A browser with a different owner cookie can't edit someone else's split.
@@ -240,8 +253,8 @@ follow while the build runs.
 1. New Rails 8 app with SQLite and Tailwind, pushed to GitHub.
 2. Migrations, models, `SplitMath`, and their tests.
 3. Quick split screen.
-4. Save a split and edit it in Even mode.
-5. People search, add, and remove (Turbo Frame and Streams).
+4. Save a split and edit it.
+5. Connecting people: search, create, recent friends.
 6. Custom split sliders.
 7. Share page and "I paid."
 8. History.
@@ -269,7 +282,7 @@ The main circular button is **Add**: it adds an unnamed person immediately, with
 or navigating. The first screen supports quick even splits and custom sliders. Entering
 $1,000 for six people must show each share immediately. Lowering requested shares leaves
 an explicit “You pay” remainder. Connect belongs to each participant, after the amounts
-are visible. It identifies the person and chooses Venmo, Cash App, Zelle, or cash; it does
+are visible. It identifies the person and chooses Venmo, Cash App, or cash; it does
 not send a request or mark anything paid. Reviewing requests is a separate final action.
 
 Recent friends are one-tap additions to the draft. Names sit beneath initial avatars.
@@ -300,7 +313,7 @@ expected payment method, not a paid status. Changes remain local for review.
 - Tapping a person's amount opens a separate dimmed, blurred view. The large number sits
   outside the keypad panel; the person's name appears inside it. Set amount applies the edit;
   Cancel or Escape discards it. An amount above the available share shows an error.
-- Payment choices use locally stored Venmo, Cash App, and Zelle logos and a cash icon.
+- Payment choices use locally stored Venmo and Cash App logos and a cash icon.
   Neutral graphite surfaces keep their brand colors and the turquoise action accent distinct.
 
 ### Mobile motion and contact selection
@@ -339,17 +352,19 @@ browser owners. The flag is an ignored local file, and production never enables 
 
 ### Requests-first follow-through — November 5, 2026
 
-Saving or reviewing a draft opens **Send requests**. A compact bill title, total, and people
+Saving a draft opens **Send requests**. A compact bill title, total, and people
 count precede the unpaid request cards; each card leads with the name, amount, and chosen
-payment action. Paid rows sit below the requests. Edit is a filled toolbar action, and
-**Save and view requests** persists the editor before navigating.
+payment action. Paid rows sit below the requests. Edit is a filled toolbar action that reopens
+the composer on the People step.
 
 The shared message contains outstanding amounts and the public split link, not organizer
-charge links. Share requests uses the device share sheet when available, with a copyable
-message fallback. Canceling the share sheet does not claim anything was sent. Cash remains
-an arrangement until explicitly marked paid. Cash App requests and Zelle expose a copyable
-contact and a short app instruction; unsupported Apple Pay and developer demo panels are
-not offered. These replace the earlier demonstration UI described above.
+charge links. **Share requests** copies that message and shows a **Shared!** recap (total,
+people requested, still owed, what you pay, and each person's amount) with a Close link home;
+it does not open a device share sheet and does not claim anything was sent. Cash remains
+an arrangement until the friend confirms on the share page.
+
+*Revised 2026-11-05: Zelle, Apple Pay and "Save and view requests" no longer exist, and the
+device share sheet was replaced by the copy-and-recap flow above.*
 
 ### Calculation before contact selection — November 5, 2026
 
@@ -389,6 +404,24 @@ bill total and an equal-split action with no effect.
 The group fills the available mobile viewport. Only its bounded people bucket scrolls;
 the bill, summary, and actions remain in place. Add person is a rounded rectangle in a dedicated
 row outside the bucket, above the persistent You pay area. Adding scrolls the bucket to the new
-card. Once a person is connected, Request split appears below You pay and opens the request
-screen without sending automatically. Removing the last connected person hides that action.
-Swipe removal, sliders, and each person's keypad and Connect drawer retain their behavior.
+card. **Next** sits below You pay and stays disabled until every person is connected (cash
+counts) and the shares do not exceed the bill. Swipe removal, sliders, and each person's keypad
+and Connect drawer retain their behavior.
+
+*Revised 2026-11-05: Request split no longer appears on the People step. It moved to Review.*
+
+
+### Review, editing and Shared — November 5, 2026
+
+**Next** opens a **Review** step on the same page: each person with their payment method and
+amount, **You pay**, and two actions, **Request split** and **Save split**. A back arrow returns
+to the people. Both actions submit the draft; Review is the only place either lives, so there is
+one last look before anything is written down. Everyone must be connected to reach it, and the
+server refuses an unconnected person too.
+
+Editing a saved split renders this same composer, already on the People step, with the saved
+rows as the draft. Changing the total there keeps the rows as they are (they are custom), so a
+lower total shows "Over the bill by" until the organizer taps **Split evenly**. Saving replaces
+the rows and keeps who has already paid.
+
+Share requests ends on a **Shared!** recap with Close (see above). Close goes home.

@@ -138,13 +138,17 @@ class QuickSplitsTest < ApplicationSystemTestCase
     assert_equal [ "$200", "$200" ], share_amounts
     assert page.evaluate_script("document.querySelector('.request-dock').getBoundingClientRect().bottom <= innerHeight + 1")
     assert_selector ".request-dock", text: "You pay"
+    # Next stays disabled until the other person is connected too.
+    assert_button "Next", disabled: true
+    connect_everyone_with_cash
+    click_on "Next"
+    assert_selector ".review-list li", count: 2
     click_on "Request split"
     assert_text "Paying in cash"
     assert_text "$200.00"
     click_on "Edit split", exact: true
-    assert_row_amounts [ "$200.00", "$200.00" ]
-    assert_text "You pay"
-    assert_text "$600.00"
+    assert_equal [ "$200", "$200" ], share_amounts
+    assert_text "You pay\n$600"
   end
 
   test "swiping a draft card reveals delete without moving its slider" do
@@ -220,15 +224,5 @@ class QuickSplitsTest < ApplicationSystemTestCase
       })()
     JS
     assert_text "8 people"
-  end
-
-  private
-
-  # Only the live rows, never the <template> beside them: a real browser keeps
-  # template content out of the document, so this selector cannot see it.
-  def share_amounts
-    count = find("[data-quick-split-logic-target=peopleCount]", visible: :all).value.to_i
-    assert_selector "ol[data-quick-split-logic-target=shares] > li", count: count
-    all("ol[data-quick-split-logic-target='shares'] > li [data-share-row-amount]").map(&:text)
   end
 end

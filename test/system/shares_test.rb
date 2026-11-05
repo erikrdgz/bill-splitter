@@ -88,11 +88,7 @@ class SharesTest < ApplicationSystemTestCase
     visit root_path
     enter_bill_amount("100")
     set_people_count("3")
-    save_split_and_open_editor
-    assert_selector "h1", text: "Edit split"
-
-    click_on "Save and view requests"
-    assert_selector "h1", text: "Send requests"
+    save_split
 
     Split.find(current_url[%r{/splits/(\d+)}, 1])
   end

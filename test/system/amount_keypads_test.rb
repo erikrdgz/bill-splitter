@@ -60,15 +60,18 @@ class AmountKeypadsTest < ApplicationSystemTestCase
     end
     assert_button "Edit Alex's amount", text: "$200.25"
     save_split_and_open_editor
-    assert_row_amounts [ "$200.25", "$500.00" ]
+    assert_equal [ "$200.25", "$500" ], share_amounts
     click_on "Edit Alex's amount"
     within "dialog[open][aria-label='Amount for Alex']" do
       click_on "Clear", exact: true
       type_amount "20.12"
       click_on "Set amount"
     end
-    click_on "Save amounts"
-    assert_row_amounts [ "$20.12", "$500.00" ]
+    assert_equal [ "$20.12", "$500" ], share_amounts
+    click_on "Next"
+    click_on "Save split"
+    assert_selector "#requests .request-amount", text: "$20.12"
+    assert_selector "#requests .request-amount", text: "$500.00"
   end
 
   test "slider gestures and arrows use whole dollars while untouched exact shares stay put" do

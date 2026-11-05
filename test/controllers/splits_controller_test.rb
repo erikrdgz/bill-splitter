@@ -14,7 +14,9 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name=?][type=hidden]", "split[people_count]"
     assert_select "button", text: /Add person/
     assert_select "[data-quick-split-logic-target=countDisplay]", text: "0 people"
-    assert_select "input[type=submit][value=?]", "Save split"
+    # Save and Request live on the review step, which is part of the same form.
+    assert_select "button[type=submit][name=intent][value=save]", text: /Save split/
+    assert_select "button[type=submit][name=intent][value=request]", text: /Request split/
   end
 
   test "the screen starts at the minimum number of people" do
@@ -153,7 +155,7 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
   test "a custom draft preserves shares and records cash without marking it paid" do
     post splits_url, params: { intent: "request", split: { amount: "1000", title: "Dinner", people_count: "2",
       draft_rows: [ { name: "Alex", payment_method: "cash", amount_cents: "20000", locked: "1" },
-                    { amount_cents: "20000", locked: "1" } ] } }
+                    { name: "Sam", payment_method: "cash", amount_cents: "20000", locked: "1" } ] } }
     split = Split.order(:id).last
     assert_redirected_to split_path(split)
     assert_equal [ 20000, 20000 ], split.participants.map(&:amount_cents)
@@ -197,25 +199,29 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
 
   # Editing.
 
-  test "the editor shows the split and its rows" do
+  # The editor is the composer again, opened on the people step. The rows are
+  # not in the HTML: QuickSplitLogic draws them from the draft it is handed as a
+  # Stimulus value, so that value is what the server has to get right.
+  test "the editor reopens the composer with the split and its rows" do
     split = create_split(amount: "100", people_count: 3)
 
     get edit_split_url(split)
 
     assert_response :success
+    assert_select "form.composer[method=post] input[name=_method][value=patch]"
     assert_select "input[name=?][value=?]", "split[title]", split.title
     assert_select "input[name=?][value=?]", "split[amount]", "100.00"
-    assert_select "ol#participants > li", 3
-    assert_select "#remaining", text: /\$0\.00/
+    assert_select "input[name=?][value=?]", "split[people_count]", "3"
+    assert_equal 3, draft_rows_on_page.size
   end
 
-  test "the editor shows each row's share and percentage" do
+  test "the editor hands over each row's id and amount so paid rows survive a save" do
     split = create_split(amount: "100", people_count: 3)
 
     get edit_split_url(split)
 
-    assert_select "##{ActionView::RecordIdentifier.dom_id(split.participants.first)}",
-                  text: /Person 1.*33\.3%.*\$33\.34/m
+    assert_equal split.participants.map(&:id), draft_rows_on_page.map { |row| row["id"] }
+    assert_equal [ 3334, 3333, 3333 ], draft_rows_on_page.map { |row| row["amount_cents"] }
   end
 
   # The spec's ownership test.
@@ -236,9 +242,9 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
   test "renaming a split keeps its amounts" do
     split = create_split(amount: "100", people_count: 3)
 
-    patch split_url(split), params: { split: { title: "Dinner at Rosalia" } }
+    patch split_url(split), params: { split: { title: "Dinner at Rosalia", amount: "100", draft_rows: rows_for(split) } }
 
-    assert_redirected_to edit_split_path(split)
+    assert_redirected_to split_path(split)
     assert_equal "Dinner at Rosalia", split.reload.title
     assert_equal [ 3334, 3333, 3333 ], split.participants.map(&:amount_cents)
   end
@@ -246,7 +252,7 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
   test "changing the total respreads the shares so they still add up" do
     split = create_split(amount: "100", people_count: 3)
 
-    patch split_url(split), params: { split: { amount: "90" } }
+    patch split_url(split), params: { split: { amount: "90", draft_rows: rows_for(split) } }
 
     split.reload
 
@@ -258,7 +264,7 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
   test "a total that would leave somebody nothing is refused" do
     split = create_split(amount: "100", people_count: 3)
 
-    patch split_url(split), params: { split: { amount: "0.02" } }
+    patch split_url(split), params: { split: { amount: "0.02", draft_rows: rows_for(split) } }
 
     assert_response :unprocessable_entity
     assert_equal 10_000, split.reload.total_cents
@@ -267,10 +273,32 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
   test "a total above the maximum is refused" do
     split = create_split(amount: "100", people_count: 3)
 
-    patch split_url(split), params: { split: { amount: "100000" } }
+    patch split_url(split), params: { split: { amount: "100000", draft_rows: rows_for(split) } }
 
     assert_response :unprocessable_entity
     assert_equal 10_000, split.reload.total_cents
+  end
+
+  # The people step will not let the organizer past Next with an unconnected
+  # row, and the server holds the same line for a request that skips the browser.
+  test "a row nobody has connected is refused" do
+    split = create_split(amount: "100", people_count: 3)
+    rows = rows_for(split)
+    rows.last[:payment_method] = ""
+
+    patch split_url(split), params: { split: { amount: "100", draft_rows: rows } }
+
+    assert_response :unprocessable_entity
+    assert_select "[role=alert]", text: /Connect everyone/
+  end
+
+  test "an edit with no rows is refused rather than emptying the split" do
+    split = create_split(amount: "100", people_count: 3)
+
+    patch split_url(split), params: { split: { title: "Nobody" } }
+
+    assert_response :unprocessable_entity
+    assert_equal 3, split.reload.participants.count
   end
 
   # History.
@@ -384,29 +412,25 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
   end
 
   # Custom mode.
+  #
+  # There is no mode switch any more: a split is custom exactly when at least one
+  # row is locked, which is what the organizer did by setting an amount by hand.
 
-  test "a split starts in even mode and can be switched to custom" do
+  test "a split starts in even mode and becomes custom once a row is locked" do
     split = create_split(amount: "100", people_count: 3)
 
     assert_predicate split, :even?
 
-    patch split_url(split), params: { split: { split_mode: "custom" } }
+    patch split_url(split), params: { split: { amount: "100", draft_rows: rows_for(split, locked: [ true, false, false ]) } }
 
     assert_predicate split.reload, :custom?
   end
 
-  test "custom amounts are respread around the locked rows" do
+  test "custom amounts are stored as the organizer set them, locks included" do
     split = create_split(amount: "100", people_count: 3)
-    patch split_url(split), params: { split: { split_mode: "custom" } }
-    first, second, third = split.reload.participants.to_a
 
-    patch split_url(split), params: { split: {
-      participants_attributes: [
-        { id: first.id, amount_cents: 5000, locked: "1" },
-        { id: second.id, amount_cents: 2500, locked: "0" },
-        { id: third.id, amount_cents: 2500, locked: "0" }
-      ]
-    } }
+    patch split_url(split), params: { split: { amount: "100", draft_rows: rows_for(split,
+      amounts: [ 5000, 2500, 2500 ], locked: [ true, false, false ]) } }
 
     assert_equal [ 5000, 2500, 2500 ], split.reload.participants.map(&:amount_cents)
     assert_equal [ true, false, false ], split.participants.map(&:locked?)
@@ -417,19 +441,12 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
   # store a split that does not add up.
   test "custom amounts that come to more than the bill are refused" do
     split = create_split(amount: "100", people_count: 3)
-    patch split_url(split), params: { split: { split_mode: "custom" } }
-    first, second, third = split.reload.participants.to_a
 
-    patch split_url(split), params: { split: {
-      participants_attributes: [
-        { id: first.id, amount_cents: 6000, locked: "1" },
-        { id: second.id, amount_cents: 9999, locked: "0" },
-        { id: third.id, amount_cents: 9999, locked: "0" }
-      ]
-    } }
+    patch split_url(split), params: { split: { amount: "100", draft_rows: rows_for(split,
+      amounts: [ 6000, 9999, 9999 ], locked: [ true, false, false ]) } }
 
     assert_response :unprocessable_entity
-    assert_select "div[role=alert]", text: /cannot come to more than the total/
+    assert_select "[role=alert]", text: /cannot come to more than the total/
     assert_equal [ 3334, 3333, 3333 ], split.reload.participants.map(&:amount_cents)
   end
 
@@ -437,94 +454,89 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
   # undoing allocations the organizer had already made.
   test "setting one row leaves the others exactly where they were" do
     split = create_split(amount: "100", people_count: 3)
-    patch split_url(split), params: { split: { split_mode: "custom" } }
-    first, second, third = split.reload.participants.to_a
 
-    # Start from 20 / 30 / 50.
-    patch split_url(split), params: { split: {
-      participants_attributes: [
-        { id: first.id, amount_cents: 2000, locked: "1" },
-        { id: second.id, amount_cents: 3000, locked: "1" },
-        { id: third.id, amount_cents: 5000, locked: "1" }
-      ]
-    } }
+    patch split_url(split), params: { split: { amount: "100", draft_rows: rows_for(split,
+      amounts: [ 2000, 3000, 5000 ], locked: [ true, true, true ]) } }
 
     assert_equal [ 2000, 3000, 5000 ], split.reload.participants.map(&:amount_cents)
 
     # Drop the first to zero and hand its share to the other two by hand.
-    patch split_url(split), params: { split: {
-      participants_attributes: [
-        { id: first.id, amount_cents: 0, locked: "1" },
-        { id: second.id, amount_cents: 3300, locked: "1" },
-        { id: third.id, amount_cents: 6700, locked: "1" }
-      ]
-    } }
+    patch split_url(split), params: { split: { amount: "100", draft_rows: rows_for(split,
+      amounts: [ 0, 3300, 6700 ], locked: [ true, true, true ]) } }
 
     assert_equal [ 0, 3300, 6700 ], split.reload.participants.map(&:amount_cents)
   end
 
   test "locked rows that come to more than the total are refused" do
     split = create_split(amount: "100", people_count: 3)
-    patch split_url(split), params: { split: { split_mode: "custom" } }
-    first, second, third = split.reload.participants.to_a
 
-    patch split_url(split), params: { split: {
-      participants_attributes: [
-        { id: first.id, amount_cents: 9000, locked: "1" },
-        { id: second.id, amount_cents: 9000, locked: "1" },
-        { id: third.id, amount_cents: 0, locked: "0" }
-      ]
-    } }
+    patch split_url(split), params: { split: { amount: "100", draft_rows: rows_for(split,
+      amounts: [ 9000, 9000, 0 ], locked: [ true, true, false ]) } }
 
     assert_response :unprocessable_entity
-    assert_select "div[role=alert]", text: /cannot come to more than the total/
+    assert_select "[role=alert]", text: /cannot come to more than the total/
     assert_equal [ 3334, 3333, 3333 ], split.reload.participants.map(&:amount_cents)
   end
 
-  test "switching back to even frees every row and spreads the money again" do
+  test "freeing every row spreads the money evenly again" do
     split = create_split(amount: "100", people_count: 3)
-    patch split_url(split), params: { split: { split_mode: "custom" } }
-    first, second, third = split.reload.participants.to_a
 
-    patch split_url(split), params: { split: {
-      participants_attributes: [
-        { id: first.id, amount_cents: 5000, locked: "1" },
-        { id: second.id, amount_cents: 2500, locked: "0" },
-        { id: third.id, amount_cents: 2500, locked: "0" }
-      ]
-    } }
+    patch split_url(split), params: { split: { amount: "100", draft_rows: rows_for(split,
+      amounts: [ 5000, 2500, 2500 ], locked: [ true, false, false ]) } }
 
     assert_predicate split.reload.participants.first, :locked?
 
-    patch split_url(split), params: { split: { split_mode: "even" } }
+    patch split_url(split), params: { split: { amount: "100", draft_rows: rows_for(split) } }
 
     split.reload
 
+    assert_predicate split, :even?
     assert_equal [ 3334, 3333, 3333 ], split.participants.map(&:amount_cents)
     assert_not split.participants.any?(&:locked?)
   end
 
-  test "a row from another split cannot be smuggled into the nested attributes" do
+  # Rows are rebuilt from the posted draft, and an id is only ever used to
+  # remember who had paid. A row id from another split must not reach into it
+  # or carry its paid time over.
+  test "a row id from another split changes nothing in that split" do
     split = create_split(amount: "100", people_count: 3)
+    stranger_row = participants(:stranger_one)
+    rows = rows_for(split)
+    rows.first[:id] = stranger_row.id
 
-    patch split_url(split), params: { split: {
-      participants_attributes: [
-        { id: participants(:stranger_one).id, amount_cents: 1, locked: "1" }
-      ]
-    } }
-
-    assert_response :not_found
-    assert_equal 3000, participants(:stranger_one).reload.amount_cents
+    assert_no_changes -> { stranger_row.reload.attributes } do
+      patch split_url(split), params: { split: { amount: "100", draft_rows: rows } }
+    end
+    assert_nil split.reload.participants.first.paid_at
   end
 
   test "a split can never be saved in a state that does not add up" do
     split = create_split(amount: "100", people_count: 3)
 
-    patch split_url(split), params: { split: { amount: "77.77" } }
+    patch split_url(split), params: { split: { amount: "77.77", draft_rows: rows_for(split) } }
 
     split.reload
 
     assert_equal 7777, split.total_cents
     assert_equal 7777, split.participants.sum(&:amount_cents)
+  end
+
+  private
+
+  # What the composer posts back for a saved split: one row per participant,
+  # every one connected (cash is enough), with optional amounts and locks.
+  def rows_for(split, amounts: nil, locked: nil)
+    split.participants.each_with_index.map do |participant, index|
+      { id: participant.id, person_id: participant.person_id, payment_method: "cash",
+        amount_cents: (amounts ? amounts[index] : participant.amount_cents),
+        locked: (locked && locked[index]) ? "1" : "0" }
+    end
+  end
+
+  # The composer draws its rows from this Stimulus value, so reading it back is
+  # how a controller test sees "the rows on the page".
+  def draft_rows_on_page
+    raw = css_select("form.composer").first["data-quick-split-logic-draft-value"]
+    JSON.parse(raw)
   end
 end

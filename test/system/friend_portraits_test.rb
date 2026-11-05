@@ -12,10 +12,11 @@ class FriendPortraitsTest < ApplicationSystemTestCase
     click_on "Choose Maya Chen"
     click_on "Connect", exact: true
     assert_selector "[data-share-row-avatar] .avatar-photo", count: 1
+    click_on "Next"
     click_on "Save split"
     assert_selector "#requests .avatar-photo", count: 1
     click_on "Edit split"
-    assert_selector "#participants .avatar-photo", count: 1
+    assert_selector "[data-share-row-avatar] .avatar-photo", count: 1
   end
 
   test "the next friend peeks in and the fade clears at the end" do
@@ -31,9 +32,10 @@ class FriendPortraitsTest < ApplicationSystemTestCase
         return next.left < strip.right && next.right > strip.right
       })()
     JS
-    click_on "Choose Alex Rivera"
-    click_on "Choose Maya Chen"
+    # Choosing the last friend scrolls the strip to its end.
+    find(".friend-list .friend-choice:last-child").click
     assert_selector ".friend-list[data-more-right=false][data-more-left=true]"
+    click_on "Choose Maya Chen"
     click_on "Connect", exact: true
     assert_selector "[data-share-row-avatar] .avatar-photo", count: 1
   end

@@ -4,12 +4,11 @@ class MobileInteractionsTest < ApplicationSystemTestCase
   test "Connect searches saved contacts and offers explicit creation inline" do
     visit root_path
     enter_bill_amount("100")
-    set_people_count(2)
-    save_split_and_open_editor
-    click_on "Name Person 1"
-    fill_in "Find a name", with: "Maya Chen"
-    click_on "Add “Maya Chen” as a new person"
-    assert_link "Name Maya Chen"
+    set_people_count(1)
+    connect_person("Person 1", "Maya Chen")
+    click_on "Next"
+    click_on "Save split"
+    assert_selector "h1", text: "Send requests"
     click_on "New split"
     start_group
     click_on "Add person", exact: true
@@ -132,7 +131,9 @@ class MobileInteractionsTest < ApplicationSystemTestCase
     visit root_path
     set_people_count(2)
     card = all("[data-quick-split-logic-target=shares] > li").last
-    shorten_auto_close(card)
+    # The tap has to land before the timer to prove the timer is not what
+    # decides, so this one gets the longest wait that still beats five seconds.
+    shorten_auto_close(card, 3000)
 
     swipe(card, 0.25)
     within(card) { click_on "Remove Person 2" }
@@ -156,32 +157,6 @@ class MobileInteractionsTest < ApplicationSystemTestCase
     assert_button "Edit Person 1's amount", text: "$18"
     assert_button "Edit Person 2's amount", text: "$30"
     assert_no_selector ".is-deleting"
-  end
-
-  test "a refused saved swipe restores the card after its exit" do
-    visit root_path
-    enter_bill_amount("100")
-    set_people_count(2)
-    save_split_and_open_editor
-    click_on "Custom"
-    check "Lock Person 1"
-    check "Lock Person 2"
-    click_on "Save amounts"
-    assert_text "Saved."
-    card = all("#participants > li").last
-    swipe(card, 0.95)
-    assert_text "Unlock a row first"
-    assert_selector "#participants > li", count: 2
-    assert_no_selector ".is-deleting"
-    # Explicitly, because the exit animation holds the row at zero opacity and a
-    # restore that forgets to undo that leaves a row that is present but
-    # invisible — which otherwise only shows up as a flaky text assertion.
-    assert_eventually("the restored card stayed invisible") do
-      page.evaluate_script(
-        "getComputedStyle(document.querySelector('#participants > li:nth-of-type(2)')).opacity"
-      ).to_f > 0.95
-    end
-    assert_row_amounts [ "$50.00", "$50.00" ]
   end
 
   test "tapping outside a person amount editor cancels the draft" do
@@ -252,8 +227,9 @@ class MobileInteractionsTest < ApplicationSystemTestCase
   end
 
   # The real wait is five seconds, which is right for a thumb and wrong for a
-  # test suite. Shortening the Stimulus value exercises the same code path.
-  def shorten_auto_close(card, milliseconds = 200)
+  # test suite. Under parallel browsers a shorter wait closes the card before
+  # the test has looked at it, so this stops well short of five without racing. Shortening the Stimulus value exercises the same code path.
+  def shorten_auto_close(card, milliseconds = 800)
     execute_script(
       "arguments[0].setAttribute('data-swipe-logic-reveal-timeout-value', arguments[1])",
       card, milliseconds
