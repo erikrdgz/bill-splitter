@@ -34,11 +34,11 @@ class CustomSplitsTest < ApplicationSystemTestCase
   test "what you free up shows as left to give" do
     open_custom_editor_for "100", 3
 
-    assert_text "Left to give\n$0.00"
+    assert_text "You pay\n$0.00"
 
     move_slider "Person 1", 0
 
-    assert_text "Left to give\n$33.34"
+    assert_text "You pay\n$33.34"
   end
 
   # The organizer's own worked example: 0 / 33 / 67 out of 100.
@@ -50,7 +50,7 @@ class CustomSplitsTest < ApplicationSystemTestCase
     move_slider "Person 3", 6700
 
     assert_row_amounts [ "$0.00", "$33.00", "$67.00" ]
-    assert_text "Left to give\n$0.00"
+    assert_text "You pay\n$0.00"
 
     click_on "Save amounts"
 
@@ -83,7 +83,7 @@ class CustomSplitsTest < ApplicationSystemTestCase
     assert_equal "5000", slider_for("Person 2").value
     # Same value and same range means the thumb cannot have moved a pixel.
     assert_equal untouched_max, slider_for("Person 2")[:max]
-    assert_text "Left to give\n$20.00"
+    assert_text "You pay\n$20.00"
   end
 
   test "every slider runs the whole bill, however the others are set" do
@@ -98,27 +98,39 @@ class CustomSplitsTest < ApplicationSystemTestCase
                  [ "Person 1", "Person 2", "Person 3" ].map { |name| slider_for(name)[:max] }
   end
 
-  # Going over is allowed while you work; it just cannot be saved.
-  test "overshooting the bill says so rather than being blocked" do
+  # The bill is a ceiling. A row can take everything nobody else is holding and
+  # not a cent more, so the shares can never come to more than the total.
+  test "a share is capped at what the others have not claimed" do
     open_custom_editor_for "100", 3
 
     move_slider "Person 1", 10_000
 
-    assert_row_amounts [ "$100.00", "$33.33", "$33.33" ]
-    assert_text "Over by\n$66.66"
-    assert_button "$66.66 over", disabled: true
+    assert_row_amounts [ "$33.34", "$33.33", "$33.33" ]
+
+    move_slider "Person 2", 0
+    move_slider "Person 1", 10_000
+
+    assert_row_amounts [ "$66.67", "$0.00", "$33.33" ]
+    assert_text "You pay\n$0.00"
   end
 
-  test "saving is refused until every share is given out" do
+  # The organizer's own worked example: ask $20 of one person and $30 of another
+  # on a $100 bill, and pay the remaining $50 yourself.
+  test "a split saves with the organizer covering what nobody was asked for" do
     open_custom_editor_for "100", 3
 
-    move_slider "Person 1", 0
+    move_slider "Person 1", 2000
+    move_slider "Person 2", 3000
+    move_slider "Person 3", 0
 
-    assert_button "$33.34 left to give", disabled: true
-
-    move_slider "Person 2", 6667
-
+    assert_text "You pay\n$50.00"
     assert_button "Save amounts", disabled: false
+
+    click_on "Save amounts"
+
+    assert_text "Saved."
+    assert_row_amounts [ "$20.00", "$30.00", "$0.00" ]
+    assert_text "You pay\n$50.00"
   end
 
   test "spread the rest evenly fills in the rows nobody has set" do
@@ -126,14 +138,14 @@ class CustomSplitsTest < ApplicationSystemTestCase
 
     move_slider "Person 1", 0
 
-    assert_text "Left to give\n$33.34"
+    assert_text "You pay\n$33.34"
 
     click_on "Spread the rest evenly"
 
     # Person 1 was touched, so it is locked and keeps its zero. The two rows
     # nobody has set share the whole bill between them.
     assert_row_amounts [ "$0.00", "$50.00", "$50.00" ]
-    assert_text "Left to give\n$0.00"
+    assert_text "You pay\n$0.00"
   end
 
   test "unlocking a row puts it back into the spread" do
@@ -153,11 +165,12 @@ class CustomSplitsTest < ApplicationSystemTestCase
     slider_for("Person 1").send_keys(:home)
 
     assert_row_amounts [ "$0.00", "$33.33", "$33.33" ]
-    assert_text "Left to give\n$33.34"
+    assert_text "You pay\n$33.34"
 
     slider_for("Person 2").send_keys(:end)
 
-    assert_row_amounts [ "$0.00", "$100.00", "$33.33" ]
+    # End takes it to everything nobody else is holding.
+    assert_row_amounts [ "$0.00", "$66.67", "$33.33" ]
   end
 
   # The bug: saving from halfway down the page used to throw you back to the top.

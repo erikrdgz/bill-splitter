@@ -8,14 +8,17 @@ import { Controller } from "@hotwired/stimulus"
 // changing another row's max slides its thumb without changing a cent behind
 // it, which looks exactly like the sliders are chained together.
 //
-// So every slider runs the whole bill, from zero to the total, fixed. The
-// amounts are free to come to less than the total (the organizer is covering
-// the rest themselves) or more (they have overshot). The remaining figure says
-// which, and the Save button stays shut until it reads zero — that is what
-// keeps the total honest, not a cap on the sliders.
+// So every slider runs the whole bill, from zero to the total, fixed, and only
+// the row being dragged is ever written to. The bill is still a ceiling: a row
+// is clamped to whatever no one else is holding, so the shares can never come
+// to more than the total.
 //
-// Nothing here saves. SplitsController checks the posted amounts and refuses a
-// split that does not add up, so the server still has the final say.
+// They can come to less, and that is the point. $100 with $20 asked of one
+// person and $30 of another leaves $50, and the $50 is what the organizer is
+// paying themselves. The remaining figure says so, and the split saves.
+//
+// Nothing here saves. SplitsController checks the posted amounts, so the server
+// still has the final say.
 //
 // Everything is whole cents. The slider's own min, max, step and value are in
 // cents too, so the browser never rounds money on our behalf.
@@ -33,8 +36,21 @@ export default class extends Controller {
 
   // Touching a row locks it: the organizer has said what this person pays, so
   // "spread the rest evenly" leaves it alone from here on.
+  //
+  // The dragged row is clamped to what the others have not claimed. This is the
+  // only slider written to, so no other thumb moves — the clamp that caused the
+  // original bug was the one applied to every row's `max`, not this one.
   drag(event) {
     const index = this.sliderTargets.indexOf(event.target)
+    const slider = this.sliderTargets[index]
+    const heldByOthers = this.sliderTargets.reduce(
+      (sum, other, position) => sum + (position === index ? 0 : Number(other.value)),
+      0
+    )
+    const available = Math.max(this.totalCentsValue - heldByOthers, 0)
+
+    if (Number(slider.value) > available) slider.value = available
+
     this.lockTargets[index].checked = true
 
     this.#render()
@@ -96,6 +112,9 @@ export default class extends Controller {
   }
 
   #renderRemaining(remainingCents) {
+    // Dragging cannot produce this, because a dragged row is clamped. Lowering
+    // the total underneath amounts already set can, and the server refuses it,
+    // so the screen says so rather than offering a button that will fail.
     const overshot = remainingCents < 0
 
     if (this.hasRemainingTarget) {
@@ -103,26 +122,19 @@ export default class extends Controller {
     }
 
     if (this.hasRemainingLabelTarget) {
-      this.remainingLabelTarget.textContent = overshot ? "Over by" : "Left to give"
+      this.remainingLabelTarget.textContent = overshot ? "Over the bill by" : "You pay"
     }
 
-    // Saving a split that does not add up would only earn an error page, so the
-    // button says what is wrong before it is pressed.
     if (this.hasSaveTarget) {
-      this.saveTarget.disabled = remainingCents !== 0
-      this.saveTarget.value = this.#saveLabel(remainingCents)
+      this.saveTarget.disabled = overshot
+      this.saveTarget.value = overshot
+        ? `${this.#formattedDollars(-remainingCents)} over the bill`
+        : "Save amounts"
     }
 
     if (this.hasSpreadTarget) {
       this.spreadTarget.disabled = this.lockTargets.every((lock) => lock.checked)
     }
-  }
-
-  #saveLabel(remainingCents) {
-    if (remainingCents === 0) return "Save amounts"
-    if (remainingCents < 0) return `${this.#formattedDollars(-remainingCents)} over`
-
-    return `${this.#formattedDollars(remainingCents)} left to give`
   }
 
   // Rule 5: display only, one decimal, worked out from cents.

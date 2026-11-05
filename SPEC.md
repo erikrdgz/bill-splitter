@@ -49,7 +49,7 @@ Five features, each small on its own, that together feel like a finished product
 | --- | --- | --- |
 | Quick split | Amount plus a people stepper (tap + or −, or type the number) shows each share instantly. No sign-up. | $100 for 3 people shows $33.34, $33.33, $33.33, and the shares always add up to the total. |
 | Name the people | Each placeholder ("Person 3") can become a saved person through search-as-you-type, or a new name added on the spot. | Searching "ma" narrows to matching saved names. A new name is saved for next time. |
-| Custom split | Adjust any person's share. The leftover spreads evenly across people you haven't touched, and touched people lock. | The total can never go over or under. A "remaining" amount is always visible. The server rejects a split that doesn't add up. |
+| Custom split | Adjust any person's share. The leftover spreads evenly across people you haven't touched, and touched people lock. | The shares can never come to more than the total. A remaining amount is always visible, and it is the part the organizer pays themselves. The server rejects a split whose shares exceed the total. |
 | Share link | One public link per split. A friend opens it, sees what they owe, and taps "I paid." | The link works without an account. The organizer sees who has paid. A wrong link shows a not-found page. |
 | History | The organizer's past splits, each with its total and how much is still owed. | Splits list newest first. An empty history invites starting a split. |
 | Ask for the money | Each saved person can hold a Venmo username, Cash App $Cashtag or Zelle contact, and the organizer can hold their own. The split then offers a request per person, and the share page offers a way to pay. | A person with a Venmo username gets a real link that opens Venmo with the amount filled in. Apps that cannot carry a request from a web page say so rather than pretending. One message holds every outstanding share, to paste into a group chat. |
@@ -100,14 +100,11 @@ The server always has the final say.
    *Revised 2026-11-05. The original rule re-evened every unlocked row on each change, which
    undid allocations the organizer had already made: dropping one person of 20/30/50 to zero
    turned the other two into 50/50 instead of leaving them at 30 and 50.*
-4. **No slider limit.** Every slider runs the whole bill, from zero to the total, and its
-   range never changes while another row is being dragged. The amounts are free to come to
-   less than the bill (the organizer is covering the rest themselves) or more (they have
-   overshot).
-
-   What keeps the total honest is the remaining amount, not a cap: it reads "Left to give"
-   when the rows come to less than the bill and "Over by" when they come to more, and a split
-   that does not add up cannot be saved.
+4. **The bill is a ceiling, not a target.** Every slider's *range* runs the whole bill and
+   never changes while another row is dragged. The row being dragged is clamped to whatever no
+   one else is holding, so the shares can never come to more than the total — and they are
+   free to come to less. What is left is what the organizer pays themselves, shown as
+   "You pay $50.00", and the split saves that way.
 
    *Revised twice on 2026-11-05. The first attempt capped each row at the total minus every
    other row. That is arithmetically sound and visually wrong: a range input draws its thumb

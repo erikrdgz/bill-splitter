@@ -349,7 +349,7 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
   # Custom mode is hand allocation, so the server takes the posted amounts as
   # the organizer's decision rather than rewriting them. What it will not do is
   # store a split that does not add up.
-  test "custom amounts that do not add up are refused, not quietly corrected" do
+  test "custom amounts that come to more than the bill are refused" do
     split = create_split(amount: "100", people_count: 3)
     patch split_url(split), params: { split: { split_mode: "custom" } }
     first, second, third = split.reload.participants.to_a
@@ -363,7 +363,7 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     } }
 
     assert_response :unprocessable_entity
-    assert_select "div[role=alert]", text: /must add up to the total/
+    assert_select "div[role=alert]", text: /cannot come to more than the total/
     assert_equal [ 3334, 3333, 3333 ], split.reload.participants.map(&:amount_cents)
   end
 
@@ -411,7 +411,7 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     } }
 
     assert_response :unprocessable_entity
-    assert_select "div[role=alert]", text: /must add up to the total/
+    assert_select "div[role=alert]", text: /cannot come to more than the total/
     assert_equal [ 3334, 3333, 3333 ], split.reload.participants.map(&:amount_cents)
   end
 

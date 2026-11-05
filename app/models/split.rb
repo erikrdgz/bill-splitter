@@ -31,7 +31,7 @@ class Split < ApplicationRecord
   }
   validate :people_count_within_limits
   validate :total_covers_at_least_a_cent_each
-  validate :participants_add_up_to_total
+  validate :participants_do_not_exceed_total
 
   scope :owned_by, ->(owner_token) { where(owner_token: owner_token) }
   scope :newest_first, -> { order(created_at: :desc) }
@@ -79,8 +79,9 @@ class Split < ApplicationRecord
     participants.each_with_index { |participant, index| participant.position = index + 1 }
   end
 
-  # What the editor shows as "remaining". Added up in Ruby, not SQL, so it is
-  # right for amounts the organizer has changed but not yet saved.
+  # What is left of the bill once everyone's share is counted — in other words,
+  # what the organizer is covering themselves. Added up in Ruby, not SQL, so it
+  # is right for amounts they have changed but not yet saved.
   def remaining_cents
     total_cents.to_i - participants.sum { |participant| participant.amount_cents.to_i }
   end
@@ -119,12 +120,17 @@ class Split < ApplicationRecord
 
   # The rule the whole app exists to keep. A split that does not add up is not
   # saved, whatever the browser believed.
-  def participants_add_up_to_total
+  # The total is a ceiling, not a target. The shares may come to less than the
+  # bill — whatever is left over is what the organizer is covering themselves,
+  # which is how most bills actually get split. What they may never do is come
+  # to more than the bill, because then the split would be collecting money
+  # that nobody owes.
+  def participants_do_not_exceed_total
     return if live_participants.empty? # the count check above already said so
 
-    difference = live_participants.sum { |participant| participant.amount_cents.to_i } - total_cents.to_i
-    return if difference.zero?
+    claimed = live_participants.sum { |participant| participant.amount_cents.to_i }
+    return if claimed <= total_cents.to_i
 
-    errors.add(:participants, "must add up to the total")
+    errors.add(:participants, "cannot come to more than the total")
   end
 end

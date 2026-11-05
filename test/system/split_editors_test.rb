@@ -12,7 +12,7 @@ class SplitEditorsTest < ApplicationSystemTestCase
     assert_field "What was it for?", with: "Split on #{Date.current.strftime('%B %-d')}"
     assert_field "Total bill", with: "100.00"
     assert_row_amounts [ "$33.34", "$33.33", "$33.33" ]
-    assert_text "Left to give\n$0.00"
+    assert_text "You pay\n$0.00"
   end
 
   test "the editor renames a split" do

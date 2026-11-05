@@ -760,3 +760,42 @@ themselves. Today that leaves "Left to give" above zero and the split cannot be 
 a split save with the organizer absorbing the difference would mean relaxing "participants add
 up to the total", which is the hardest rule in the spec — so it is a question for them, not an
 assumption to make here.
+
+## The bill is a ceiling, not a target
+
+Corrected after a third round of feedback, and the earlier two had it wrong in both
+directions.
+
+**The rule, in the organizer's words:** on a $100 bill you might ask $20 of one person and $30
+of another and pay the remaining $50 yourself. Or ask $50 and $50. But there is never more
+than $100.
+
+So:
+
+- **The shares may come to less than the total.** The gap is what the organizer covers, and
+  the split saves that way. `participants_add_up_to_total` became
+  `participants_do_not_exceed_total`. This relaxes the hardest rule in the spec, on the
+  organizer's explicit instruction, and the spec was updated to match.
+- **The shares may never come to more.** Enforced by clamping the row being dragged to
+  whatever no one else holds, and again by the validation.
+
+### Why clamping the dragged row is not the bug that was just fixed
+
+The previous bug was clamping every row's `max`. That changed the *range* of sliders nobody
+had touched, and a range input draws its thumb at value ÷ max — so their thumbs moved while
+their amounts did not.
+
+Clamping writes a value, to one slider, the one under the organizer's finger. Nothing else on
+the page is touched. A slider that stops moving when you drag past the end of what is
+available is a slider behaving normally; a slider that drifts while you drag a different one
+is not.
+
+### "Left to give" became "You pay"
+
+The figure was always the same number; the label was describing it as an unfinished task
+rather than as the organizer's own share. "You pay $50.00" is what it actually means, with
+"Whatever you don't ask anyone for is yours to cover" beneath it.
+
+The Save button is no longer disabled for a leftover — there is nothing wrong with one. It is
+disabled only in the one state the sliders cannot produce: lowering the total underneath
+amounts already set, which reads "Over the bill by".

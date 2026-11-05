@@ -39,20 +39,39 @@ class SplitTest < ActiveSupport::TestCase
 
   # The rule the whole app exists to keep.
 
-  test "a split is invalid when the participants do not add up to the total" do
+  test "a split is invalid when the participants come to more than the total" do
     split = build_even_split
     split.participants.first.amount_cents += 1
 
     assert_not split.valid?
-    assert_includes split.errors[:participants], "must add up to the total"
+    assert_includes split.errors[:participants], "cannot come to more than the total"
   end
 
-  test "a split is invalid when the participants add up to less than the total" do
+  # The total is a ceiling, not a target. What is left over is the part the
+  # organizer is covering themselves: $100 with $20 asked of one person and $30
+  # of another is a perfectly good split where the organizer pays $50.
+  test "a split is valid when the participants come to less than the total" do
     split = build_even_split
     split.participants.first.amount_cents -= 1
 
-    assert_not split.valid?
-    assert_includes split.errors[:participants], "must add up to the total"
+    assert_predicate split, :valid?
+  end
+
+  test "the organizer's own share is whatever nobody was asked for" do
+    split = build_even_split(total_cents: 10_000, people_count: 2, apply_math: false)
+    split.participants.first.amount_cents = 2000
+    split.participants.second.amount_cents = 3000
+
+    assert_predicate split, :valid?
+    assert_equal 5000, split.remaining_cents
+  end
+
+  test "a split where nobody is asked for anything is still allowed" do
+    split = build_even_split(apply_math: false)
+    split.participants.each { |participant| participant.amount_cents = 0 }
+
+    assert_predicate split, :valid?
+    assert_equal 10_000, split.remaining_cents
   end
 
   test "the database refuses a participant amount below zero even without validations" do
