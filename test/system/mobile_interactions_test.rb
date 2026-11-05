@@ -142,6 +142,7 @@ class MobileInteractionsTest < ApplicationSystemTestCase
   end
 
   test "a full swipe collapses the middle card without hiding the next person" do
+    with_motion
     visit root_path
     enter_bill_amount("90")
     set_people_count(3)

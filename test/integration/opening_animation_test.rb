@@ -34,7 +34,9 @@ class OpeningAnimationTest < ActionDispatch::IntegrationTest
 
   test "regular use keeps the clock fresh, so it does not replay mid-session" do
     get root_url
-    travel 20.minutes { get splits_url }
+    travel 20.minutes do
+      get splits_url
+    end
     travel 40.minutes do
       get root_url
       assert_select ".intro", 0

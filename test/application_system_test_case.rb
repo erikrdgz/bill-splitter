@@ -29,6 +29,13 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
 
   private
 
+  # For the tests that are about an animation: undo the suite's reduced motion
+  # for this one browser before the page loads.
+  def with_motion
+    page.driver.browser.execute_cdp("Emulation.setEmulatedMedia",
+                                    features: [ { name: "prefers-reduced-motion", value: "no-preference" } ])
+  end
+
   # Saving is the last of three steps: bill, people, review. The people step
   # refuses to go on until every row is connected, so a test that only cares
   # about the money connects everyone with cash first.
