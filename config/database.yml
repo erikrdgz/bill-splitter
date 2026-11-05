@@ -28,4 +28,6 @@ test:
 # ensure the database is located in a persisted volume.
 production:
   <<: *default
-  # database: path/to/persistent/storage/production.sqlite3
+  # On the free demo host this file is wiped on restart. That is acceptable:
+  # the demo reseeds itself, and nothing here is real data.
+  database: storage/production.sqlite3

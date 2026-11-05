@@ -48,6 +48,9 @@
           <% end %>
         </nav>
       </header>
+      <% if DevelopmentContacts.demo_mode? %>
+        <p class="demo-note">Demo: contacts are sample data with fictional 555 numbers. Nothing is sent from this site.</p>
+      <% end %>
       <main id="main" class="page <%= content_for(:page_class) %>">
         <%= render "shared/flash", message: flash[:notice] %>
         <%= yield %>

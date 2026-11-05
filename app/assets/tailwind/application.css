@@ -398,6 +398,7 @@
   .cash-arrangement .payment-logo { width: 21px; height: 21px; opacity: .7; }
   .payment-details-link { display: inline-flex; align-items: center; min-height: 44px; font-size: 12px; color: var(--color-muted); }
   .request-card .saved-handles { display: none; }
+  .demo-note { color: var(--color-muted); font-size: 12px; line-height: 1.5; text-align: center; }
   .request-note { color: var(--color-muted); font-size: 13px; line-height: 1.5; }
   .request-card:has(.payment-actions) .payment-details-link { margin-bottom: -8px; }
   .saved-handles { color: var(--color-muted); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }

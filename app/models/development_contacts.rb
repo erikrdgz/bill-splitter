@@ -17,7 +17,13 @@ class DevelopmentContacts
   end
 
   def self.enabled?
-    Rails.env.development? && flag_path.exist?
+    (Rails.env.development? && flag_path.exist?) || demo_mode?
+  end
+
+  # The hosted demo sets DEMO_MODE so a visitor lands on a usable contact list
+  # instead of an empty app.
+  def self.demo_mode?
+    ENV["DEMO_MODE"] == "true"
   end
 
   def self.seed_for(owner_token)

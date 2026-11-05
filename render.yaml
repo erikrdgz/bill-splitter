@@ -1,0 +1,13 @@
+# Free Render web service for the public demo. Render builds the Dockerfile;
+# the entrypoint runs db:prepare on boot, and demo contacts seed per browser.
+services:
+  - type: web
+    name: bill-splitter
+    runtime: docker
+    plan: free
+    healthCheckPath: /up
+    envVars:
+      - key: SECRET_KEY_BASE
+        generateValue: true
+      - key: DEMO_MODE
+        value: "true"

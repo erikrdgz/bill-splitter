@@ -1112,3 +1112,14 @@ from the scanner. If `sms_url` ever builds its scheme from data, this entry must
 The same push also loosened the "amount is centred" system test from 2px to 10px: CI's Linux
 fonts draw the "$" and placeholder a few pixels wider than macOS, and the test was failing in CI
 only.
+
+## The public demo runs on Render's free tier, with sample contacts on
+
+The demo is for showing the app, not storing anything, so it runs on a free Render web service
+built from the existing Dockerfile (`render.yaml`). Free instances sleep after 15 idle minutes and
+their disk is wiped on restart, so the SQLite file starts fresh each time. That is fine here:
+`DEMO_MODE=true` reuses the sample contacts from local preview and seeds them per browser on the
+first visit, so every visitor still gets a full contact list. The numbers are fictional 555-01xx
+numbers and every request is a `sms:` link that opens the visitor's own messages app, so the site
+itself never sends anything. A one-line note in the layout says so. Action Cable uses the
+in-process adapter because every Turbo Stream comes back in an HTTP response; no Redis is needed.
