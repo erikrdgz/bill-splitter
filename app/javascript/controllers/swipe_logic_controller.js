@@ -95,12 +95,14 @@ export default class extends Controller {
     await Promise.all(this.exitAnimations.map(animation => animation.finished.catch(() => {})))
   }
   #restore() {
+    // Cancelling drops the exit's forwards-fill, so the row is already back at
+    // full height and opacity. Fade it in from zero so the return reads as a
+    // return rather than a pop, and let close() spring the surface back.
     this.exitAnimations?.forEach(animation => animation.cancel())
     this.exitAnimations = [
-      // Fade the entire row before its height becomes a thin clipping strip.
-      // Keep opacity held at zero until the DOM removal or server response.
-      this.element.animate([{opacity: 1}, {opacity: 0}],
-        {duration: 150, delay: 40, easing: "ease-out", fill: "forwards"}),]
+      this.element.animate([{opacity: 0}, {opacity: 1}],
+        {duration: 150, easing: "ease-out"})
+    ]
     this.element.classList.remove("is-deleting")
     this.deleting = false
     this.close()

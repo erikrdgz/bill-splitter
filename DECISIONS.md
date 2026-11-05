@@ -927,3 +927,14 @@ value exercises exactly the same code path.
 
 The behavior was checked against the real default in a browser as well: the card read open at
 4508ms and closed at 5008ms.
+
+### The restore animation faded the card out instead of in
+
+The flaky system test turned out to be hiding a real bug. `#restore`, which runs when the
+server refuses a delete, started a fresh animation from `opacity: 1` to `opacity: 0` with
+`fill: "forwards"` — its comment copy-pasted from `#exit`. So a refused deletion put the row
+back and then held it invisible. The test only failed sometimes because it depended on whether
+Capybara read the row before or after a 190ms fade.
+
+It now fades from 0 to 1, and the test asserts the restored row's computed opacity directly
+rather than inferring it from whether the text happened to be readable.

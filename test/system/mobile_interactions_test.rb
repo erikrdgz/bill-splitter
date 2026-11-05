@@ -170,6 +170,14 @@ class MobileInteractionsTest < ApplicationSystemTestCase
     assert_text "Unlock a row first"
     assert_selector "#participants > li", count: 2
     assert_no_selector ".is-deleting"
+    # Explicitly, because the exit animation holds the row at zero opacity and a
+    # restore that forgets to undo that leaves a row that is present but
+    # invisible — which otherwise only shows up as a flaky text assertion.
+    assert_eventually("the restored card stayed invisible") do
+      page.evaluate_script(
+        "getComputedStyle(document.querySelector('#participants > li:nth-of-type(2)')).opacity"
+      ).to_f > 0.95
+    end
     assert_row_amounts [ "$50.00", "$50.00" ]
   end
 
