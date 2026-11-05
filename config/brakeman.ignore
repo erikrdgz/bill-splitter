@@ -1,0 +1,49 @@
+{
+  "ignored_warnings": [
+    {
+      "warning_type": "Cross-Site Scripting",
+      "warning_code": 4,
+      "fingerprint": "279ba3a13faa85598f0979cabd48889f2b0ff114f92c59f7cdcae2a566362705",
+      "check_name": "LinkToHref",
+      "message": "Potentially unsafe model attribute in `link_to` href",
+      "file": "app/views/payments/_request_row.html.erb",
+      "line": 23,
+      "link": "https://brakemanscanner.org/docs/warning_types/link_to_href",
+      "code": "link_to(PaymentText.new(:participant => Split.new, :split => Split.owned_by(owner_token).find(params[:id]), :payment_profile => PaymentProfile.for_owner(owner_token)).sms_url, :class => \"payment-action\")",
+      "render_path": [
+        {
+          "type": "controller",
+          "class": "SplitsController",
+          "method": "show",
+          "line": 55,
+          "file": "app/controllers/splits_controller.rb",
+          "rendered": {
+            "name": "splits/show",
+            "file": "app/views/splits/show.html.erb"
+          }
+        },
+        {
+          "type": "template",
+          "name": "splits/show",
+          "line": 24,
+          "file": "app/views/splits/show.html.erb",
+          "rendered": {
+            "name": "payments/_request_row",
+            "file": "app/views/payments/_request_row.html.erb"
+          }
+        }
+      ],
+      "location": {
+        "type": "template",
+        "template": "payments/_request_row"
+      },
+      "user_input": "PaymentText.new(:participant => Split.new, :split => Split.owned_by(owner_token).find(params[:id]), :payment_profile => PaymentProfile.for_owner(owner_token)).sms_url",
+      "confidence": "Weak",
+      "cwe_id": [
+        79
+      ],
+      "note": "Reviewed 2026-11-05. PaymentText#sms_url always begins with the literal sms: scheme, so the href can never become javascript:. The phone number is validated and stored as E.164, and the message body goes through ERB::Util.url_encode."
+    }
+  ],
+  "brakeman_version": "8.1.0"
+}

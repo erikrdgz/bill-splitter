@@ -1098,3 +1098,17 @@ instead of 200ms so the test can look at the open card before the timer closes i
   people step. The server and the browser both refuse it; the message is just not shown.
 - The old row editor's controller, views and `SplitLogic` are unreferenced. Removing them is a
   separate, behavior-free cleanup.
+
+## The Brakeman warning on the Text link is ignored, with a reason
+
+Brakeman flags `link_to text.sms_url` in `_request_row` as "potentially unsafe model attribute
+in `link_to` href" (weak confidence). The risk it guards against is a `javascript:` URL stored in
+the database and rendered as a link. That cannot happen here: `PaymentText#sms_url` always starts
+with the literal `sms:` scheme, the phone number is validated and stored as E.164, and the body
+goes through `ERB::Util.url_encode`. Brakeman cannot see through the method call, so the warning
+is recorded in `config/brakeman.ignore` with that note rather than rewriting good code to hide it
+from the scanner. If `sms_url` ever builds its scheme from data, this entry must go.
+
+The same push also loosened the "amount is centred" system test from 2px to 10px: CI's Linux
+fonts draw the "$" and placeholder a few pixels wider than macOS, and the test was failing in CI
+only.
