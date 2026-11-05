@@ -201,3 +201,14 @@ constraint, which is a useful sign they were never meant to be kept. They now ho
 dinner split three ways (3334 + 3333 + 3333), an older taxi split for history ordering, and a
 third split under a different `owner_token` so the ownership boundary has something to test
 against in step 4.
+
+### `test/system/.keep`, because CI ran system tests against a directory that did not exist
+
+The generated workflow runs `bin/rails test:system`, but `rails new` does not create
+`test/system` — that folder only appears when you generate a system test. The test runner then
+tries to `require` the path literally and dies with `LoadError: cannot load such file --
+test/system`, failing CI on the very first push.
+
+Committing the empty directory makes the glob find nothing and pass. The first real system test
+arrives with the first screen in step 3; writing one now, with no route to visit, would have
+been a test of nothing.
