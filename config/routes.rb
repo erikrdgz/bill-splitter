@@ -3,7 +3,7 @@ Rails.application.routes.draw do
   # and arithmetic.
   root "splits#new"
 
-  resources :splits, only: %i[create show edit update] do
+  resources :splits, only: %i[index create show edit update] do
     resources :participants, only: %i[create update destroy]
   end
 

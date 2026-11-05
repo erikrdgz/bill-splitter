@@ -62,7 +62,7 @@
                                                    .map(&:amount_cents)) %>"
              step="1"
              value="<%= participant.amount_cents %>"
-             class="w-full"
+             class="w-full accent-black"
              aria-label="<%= participant.display_name %>'s share"
              data-split-logic-target="slider"
              data-action="input->split-logic#drag change->split-logic#save">
@@ -75,6 +75,7 @@
                name="<%= field_name.call(:locked) %>"
                form="split_amounts"
                value="1"
+               class="accent-black"
                <%= "checked" if participant.locked? %>
                aria-label="Lock <%= participant.display_name %>"
                data-split-logic-target="lock"

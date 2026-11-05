@@ -208,6 +208,77 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 10_000, split.reload.total_cents
   end
 
+  # History.
+
+  test "history invites starting a split when there is nothing in it" do
+    get splits_url
+
+    assert_response :success
+    assert_select "#splits", false
+    assert_select "a[href=?]", root_path, text: "Split a bill"
+  end
+
+  test "history lists this browser's splits newest first" do
+    older = create_split(amount: "45", people_count: 2)
+    older.update!(title: "Taxi home", created_at: 3.days.ago)
+    newer = create_split(amount: "100", people_count: 3)
+    newer.update!(title: "Dinner")
+
+    get splits_url
+
+    assert_select "#splits > li", 2
+    assert_select "#splits > li:first-child", text: /Dinner/
+    assert_select "#splits > li:last-child", text: /Taxi home/
+  end
+
+  test "each split shows its total and what is still owed" do
+    split = create_split(amount: "100", people_count: 3)
+    split.participants.first.update!(paid_at: Time.current)
+
+    get splits_url
+
+    assert_select "#splits > li", text: /\$100\.00.*\$66\.66 owed/m
+  end
+
+  test "a fully paid split says so rather than showing nothing owed" do
+    split = create_split(amount: "100", people_count: 2)
+    split.participants.each { |participant| participant.update!(paid_at: Time.current) }
+
+    get splits_url
+
+    assert_select "#splits > li", text: /All paid/
+  end
+
+  test "history shows only this browser's splits" do
+    create_split(amount: "100", people_count: 3)
+
+    get splits_url
+
+    assert_select "#splits > li", 1
+    assert_select "#splits", text: /Someone else's brunch/, count: 0
+  end
+
+  test "tapping a split opens its detail page" do
+    split = create_split(amount: "100", people_count: 3)
+
+    get splits_url
+
+    assert_select "#splits > li a[href=?]", split_path(split)
+  end
+
+  # Every row adds up its own participants. Without includes(:participants) that
+  # is a query per split, so the page would get slower the more it has to show.
+  test "history does not run a query per split" do
+    3.times { create_split(amount: "100", people_count: 3) }
+    queries_for_three = count_queries { get splits_url }
+
+    3.times { create_split(amount: "100", people_count: 3) }
+    queries_for_six = count_queries { get splits_url }
+
+    assert_equal queries_for_three, queries_for_six,
+                 "the number of queries grew with the number of splits"
+  end
+
   # The organizer's own view of a split.
 
   test "the detail page shows who has paid and what is still owed" do

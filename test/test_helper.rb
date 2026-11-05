@@ -24,4 +24,18 @@ class ActionDispatch::IntegrationTest
 
     Split.find(response.location[%r{/splits/(\d+)/edit}, 1])
   end
+
+  # Counts the SELECTs a block runs, so an N+1 can be asserted against rather
+  # than noticed in production. SCHEMA and TRANSACTION rows are the adapter
+  # talking to itself, not the page's doing.
+  def count_queries(&block)
+    count = 0
+    counter = ->(_name, _start, _finish, _id, payload) do
+      count += 1 unless payload[:name].in?([ "SCHEMA", "TRANSACTION" ])
+    end
+
+    ActiveSupport::Notifications.subscribed(counter, "sql.active_record", &block)
+
+    count
+  end
 end

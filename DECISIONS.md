@@ -536,3 +536,28 @@ to copy" instead of "Link copied."
 that appears regardless is worse than no confirmation, because the organizer pastes nothing
 into the group chat and does not know why. The input means the feature works with the
 JavaScript switched off entirely.
+
+## Step 8 — History
+
+### `includes(:participants)`, with a test that fails without it
+
+Every row in the list shows what is still owed, which adds up that split's participants.
+Without eager loading that is one query per split, and the page is a list — it gets slower the
+more it has to show.
+
+`test "history does not run a query per split"` renders three splits, counts the queries,
+renders six, and counts again. The counts must match. Removing the `includes` was tried: the
+test fails (9 queries against 15), so it is a test that can actually catch the regression
+rather than one that passes forever.
+
+### Sliders and checkboxes are `accent-black`
+
+Found by looking at the screen rather than by a test: Chrome renders range inputs and
+checkboxes in its own blue, which is the one thing the design constraints rule out. One
+Tailwind utility fixes both. Worth remembering that native form controls bring their own
+colours and will not respect a palette until told to.
+
+### History says "All paid" rather than "$0.00 owed"
+
+A zero needs reading and comparing; "All paid" is the answer. The share page does the same
+thing with "Everyone has paid."

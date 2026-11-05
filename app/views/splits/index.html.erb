@@ -1,0 +1,26 @@
+<% content_for :title, "Your splits" %>
+
+<h1 class="text-2xl font-semibold tracking-tight">Your splits</h1>
+
+<% if @splits.any? %>
+  <p class="mt-2 text-black/70">
+    Saved on this device. <%= pluralize(@splits.size, "split") %>, newest first.
+  </p>
+
+  <ol class="mt-6" id="splits">
+    <%= render partial: "splits/split_row", collection: @splits, as: :split %>
+  </ol>
+
+  <%= link_to "Split a bill", root_path,
+              class: "mt-10 block border-2 border-black bg-black px-4 py-3 text-center " \
+                     "font-medium text-white" %>
+<% else %>
+  <%# The empty state invites starting a split rather than apologising for
+      having nothing. %>
+  <p class="mt-2 text-black/70">Nothing here yet.</p>
+  <p class="mt-6">Split a bill and it will be saved here, on this device.</p>
+
+  <%= link_to "Split a bill", root_path,
+              class: "mt-6 block border-2 border-black bg-black px-4 py-3 text-center " \
+                     "font-medium text-white" %>
+<% end %>

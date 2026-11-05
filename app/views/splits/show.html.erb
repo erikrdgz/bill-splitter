@@ -48,7 +48,9 @@
   </p>
 </section>
 
-<div class="mt-10">
+<div class="mt-10 flex gap-2">
   <%= link_to "Edit split", edit_split_path(@split),
-              class: "block border-2 border-black px-4 py-3 text-center font-medium" %>
+              class: "flex-1 border-2 border-black px-4 py-3 text-center font-medium" %>
+  <%= link_to "All splits", splits_path,
+              class: "flex-1 border-2 border-black px-4 py-3 text-center font-medium" %>
 </div>

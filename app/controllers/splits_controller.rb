@@ -2,6 +2,15 @@ class SplitsController < ApplicationController
   before_action :set_quick_split_limits, only: %i[new create]
   before_action :set_split, only: %i[show edit update]
 
+  # History: this browser's splits, newest first.
+  #
+  # includes(:participants) matters here. Every row shows what is still owed,
+  # which adds up that split's participants — without it this is one query per
+  # split on the page, and the page is a list.
+  def index
+    @splits = Split.owned_by(owner_token).newest_first.includes(:participants)
+  end
+
   # The quick split screen. It touches no database: the organizer has not asked
   # us to remember anything yet, so there is nothing to save and nothing to look
   # up. The shares on screen are worked out in the browser by QuickSplitLogic,
