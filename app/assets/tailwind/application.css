@@ -707,3 +707,19 @@
   @keyframes avatar-pop { from { opacity: 0; scale: .4; } to { opacity: 1; scale: 1; } }
   @keyframes connect-copy-in { from { opacity: 0; translate: -10px 0; } to { opacity: 1; translate: 0 0; } }
 }
+
+/* One entrance for every change of view: the old view fades out fast and the
+   new one fades in while rising a few pixels. Used by Turbo page visits (the
+   view-transition meta tag) and by the composer's steps (split_flow_logic). */
+@layer components {
+  @media (prefers-reduced-motion: no-preference) {
+    ::view-transition-old(root) { animation: view-out 140ms ease-out both; }
+    ::view-transition-new(root) { animation: view-in 320ms cubic-bezier(.22, 1, .36, 1) 60ms both; }
+  }
+  /* With reduced motion the swap is instant rather than a slower fade. */
+  @media (prefers-reduced-motion: reduce) {
+    ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none; }
+  }
+  @keyframes view-out { to { opacity: 0; } }
+  @keyframes view-in { from { opacity: 0; translate: 0 14px; } to { opacity: 1; translate: 0 0; } }
+}

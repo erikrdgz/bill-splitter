@@ -32,14 +32,27 @@ class ApplicationController < ActionController::Base
     token
   end
 
-  # The opening animation plays once per browser session, on whichever page
-  # opens it. The session cookie remembers it has played, so the server decides
-  # before any HTML is sent and the page never flashes the intro and then hides
-  # it. Tests switch it off in config/environments/test.rb.
+  # The opening animation plays on a visitor's first full page load, and again
+  # when they come back after INTRO_AWAY of no requests. A browser session alone
+  # was not enough: iOS keeps one alive for days, so a returning visitor never
+  # saw it. Turbo requests (link visits, prefetches) refresh the clock but never
+  # play it, so it cannot interrupt someone mid-flow. The server decides before
+  # any HTML is sent, so the page never flashes the intro and then hides it.
+  # Tests switch it off in config/environments/test.rb.
+  INTRO_AWAY = 30.minutes
+
   def play_intro?
     return false if Rails.configuration.x.intro == false
-    return false if session[:intro_played]
+    return @play_intro if defined?(@play_intro)
 
-    session[:intro_played] = true
+    last_seen = session[:last_seen_at]
+    session[:last_seen_at] = Time.current.to_i
+    @play_intro = full_page_load? && (last_seen.nil? || Time.current.to_i - last_seen > INTRO_AWAY)
+  end
+
+  # Turbo marks its own fetches; a typed URL, a tapped link from a text, or a
+  # reload has neither header.
+  def full_page_load?
+    request.headers["X-Turbo-Request-Id"].blank? && request.headers["X-Sec-Purpose"].blank?
   end
 end

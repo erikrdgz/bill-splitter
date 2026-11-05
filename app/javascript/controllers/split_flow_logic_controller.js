@@ -47,28 +47,27 @@ export default class extends Controller {
     if (this.nextTarget.disabled) return
     this.titleTarget.value = this.titleTarget.value.trim()
     this.transitioning = true
-    const panel = this.keypadControllerTarget.querySelector(".entry-keypad")
-    if (!panel.hidden && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      await panel.animate([{ opacity: 1 }, { opacity: 0, transform: "translateY(6px)" }], { duration: 160, easing: "ease-out" }).finished
-    }
-    this.#showGroup(true)
+    await this.#swap(() => {
+      this.#showGroup(true)
+      window.scrollTo({ top: 0, behavior: "instant" })
+    }, this.groupTarget)
     this.transitioning = false
-    this.#reveal(this.groupTarget)
     this.groupTarget.querySelector("h2").focus({ preventScroll: true })
-    window.scrollTo({ top: 0, behavior: "instant" })
   }
 
   // Review is a third view of the same draft. data-stage stays "group" so the
   // bill header keeps its read-only look; data-review only swaps the panels.
-  review() {
+  async review() {
     if (this.editingBill) this.edit()
-    this.#showReview(true)
+    await this.#swap(() => {
+      this.#showReview(true)
+      window.scrollTo({ top: 0, behavior: "instant" })
+    }, this.reviewTarget)
     this.reviewTarget.querySelector("h2").focus({ preventScroll: true })
-    window.scrollTo({ top: 0, behavior: "instant" })
   }
 
-  backToGroup() {
-    this.#showReview(false)
+  async backToGroup() {
+    await this.#swap(() => this.#showReview(false), this.groupTarget)
     this.groupTarget.querySelector("h2").focus({ preventScroll: true })
   }
 
@@ -76,8 +75,6 @@ export default class extends Controller {
     this.element.dataset.review = String(reviewing)
     this.groupTarget.hidden = reviewing
     this.reviewTarget.hidden = !reviewing
-    if (!reviewing) this.#reveal(this.groupTarget)
-    else this.#reveal(this.reviewTarget)
   }
 
   edit() {
@@ -130,6 +127,19 @@ export default class extends Controller {
     this.amountTarget.tabIndex = group ? -1 : 0
     this.keypadControllerTarget.dataset.locked = String(group)
     this.keypadControllerTarget.querySelector(".entry-keypad").hidden = group
+  }
+
+  // Steps change inside one page, so Turbo's page transitions never see them.
+  // startViewTransition snapshots the old step, runs the swap, and animates to
+  // the new one with the same CSS as a page visit. Browsers without it get the
+  // older fade-in on the new panel; reduced motion gets an instant swap.
+  async #swap(update, revealed) {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return update()
+    if (!document.startViewTransition) {
+      update()
+      return this.#reveal(revealed)
+    }
+    await document.startViewTransition(update).updateCallbackDone
   }
 
   #reveal(element) {

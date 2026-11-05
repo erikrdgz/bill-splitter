@@ -1,7 +1,8 @@
 require "test_helper"
 
-# The opening animation plays once per browser session. The server decides, so
-# the overlay is either in the HTML or it is not; there is no flash-then-hide.
+# The opening animation plays on a visitor's first full page load and again after
+# half an hour away. The server decides, so the overlay is either in the HTML or
+# it is not; there is no flash-then-hide.
 class OpeningAnimationTest < ActionDispatch::IntegrationTest
   setup do
     @original = Rails.configuration.x.intro
@@ -10,7 +11,7 @@ class OpeningAnimationTest < ActionDispatch::IntegrationTest
 
   teardown { Rails.configuration.x.intro = @original }
 
-  test "the first page of a session plays the intro and later pages do not" do
+  test "the first page load plays the intro and later pages do not" do
     get root_url
     assert_select ".intro[data-turbo-temporary]", 1
 
@@ -18,6 +19,33 @@ class OpeningAnimationTest < ActionDispatch::IntegrationTest
     assert_select ".intro", 0
 
     get root_url
+    assert_select ".intro", 0
+  end
+
+  test "coming back after half an hour away plays it again" do
+    get root_url
+    assert_select ".intro", 1
+
+    travel 31.minutes do
+      get root_url
+      assert_select ".intro", 1
+    end
+  end
+
+  test "regular use keeps the clock fresh, so it does not replay mid-session" do
+    get root_url
+    travel 20.minutes { get splits_url }
+    travel 40.minutes do
+      get root_url
+      assert_select ".intro", 0
+    end
+  end
+
+  test "a Turbo visit or prefetch never plays it" do
+    get root_url, headers: { "X-Turbo-Request-Id" => "abc" }
+    assert_select ".intro", 0
+
+    get root_url, headers: { "X-Sec-Purpose" => "prefetch" }
     assert_select ".intro", 0
   end
 

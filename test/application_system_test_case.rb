@@ -19,7 +19,13 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   # 375 x 812 is the viewport the spec designs for, so the tests drive the app
   # at the size most people will actually use it at rather than at a desktop
   # width where a cramped mobile layout would still pass.
-  driven_by :selenium, using: :headless_chrome, screen_size: [ 375, 812 ]
+  #
+  # Reduced motion makes view transitions instant. While one is running the page
+  # ignores clicks, so a test that clicks the next button the moment it appears
+  # could lose that click to an animation it does not care about.
+  driven_by :selenium, using: :headless_chrome, screen_size: [ 375, 812 ] do |options|
+    options.add_argument("--force-prefers-reduced-motion")
+  end
 
   private
 

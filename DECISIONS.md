@@ -1201,3 +1201,25 @@ known cause of stutter on phones, and a darker scrim reads the same.
 The draft card is focusable only so arrow keys can reveal Delete. Its outline and the iOS grey
 tap flash both painted over the whole card and looked broken, so both are off for the card; the
 controls inside it keep their own focus styles.
+
+## The intro plays on a first visit and after half an hour away
+
+Once per browser session sounded right, but iOS keeps a session alive for days, so anyone coming
+back never saw it again. `play_intro?` now stores when the visitor was last seen and plays the
+intro on a full page load when there is no record or the gap is over 30 minutes. Turbo requests
+(link visits, hover prefetches) update the clock but never play it, so it cannot cut into someone
+partway through a split. Product call: 30 minutes is long enough that it never repeats during one
+sitting, short enough that a link opened later in the day gets the full first impression.
+
+## Every change of view uses one View Transition
+
+Clicking Next swapped panels in a single frame. The composer's steps (Next, Review, Back) now
+run their swap inside `document.startViewTransition`, and the layout's
+`<meta name="view-transition" content="same-origin">` makes Turbo do the same for page visits.
+One pair of keyframes on `::view-transition-old/new(root)` gives both the same motion: the old
+view fades out fast, the new one fades in while rising 14 px. Browsers without the API fall back
+to the previous panel fade, and reduced motion swaps instantly.
+
+System tests run Chrome with `--force-prefers-reduced-motion`. A running view transition ignores
+clicks, so a test that clicks the next button the moment it appears could lose the click to an
+animation it does not care about.

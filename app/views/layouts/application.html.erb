@@ -18,6 +18,9 @@
         used here because it works through `provide :head`, which only shows up
         if it runs before `yield :head` — written below that line it renders
         nothing at all, silently. %>
+    <%# Page-to-page navigation uses the browser's View Transitions, the same
+        motion the composer's steps use (see ::view-transition in the CSS). %>
+    <meta name="view-transition" content="same-origin">
     <%= turbo_refresh_method_tag :morph %>
     <%= turbo_refresh_scroll_tag :preserve %>
 
