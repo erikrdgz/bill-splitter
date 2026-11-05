@@ -8,10 +8,13 @@
 # there is no SMS vendor, no cost and no way to text a stranger; the organizer's
 # own Messages app does the sending.
 class PaymentText
-  def initialize(participant:, split:, payment_profile:)
+  # share_url is passed in rather than built here: URLs need the request's host,
+  # and a model should not reach for the request.
+  def initialize(participant:, split:, payment_profile:, share_url: nil)
     @participant = participant
     @split = split
     @payment_profile = payment_profile
+    @share_url = share_url
   end
 
   # Cash has no link, so it has no text. A person added from the editor has no
@@ -50,7 +53,10 @@ class PaymentText
 
   def body
     "Hi #{@participant.display_name.split.first}, your share of #{@split.title} is " \
-      "#{DollarAmount.format(@participant.amount_cents)}. Pay with #{link.name}: #{link.url}"
+      "#{DollarAmount.format(@participant.amount_cents)}. Pay with #{link.name}: #{link.url}" +
+      # The share page is where "I paid" lives, so a friend who only ever sees
+      # this text can still mark themselves paid.
+      (@share_url ? " Then tap I paid here: #{@share_url}" : "")
   end
 
   # `?&body=` rather than `?body=` or `&body=`: iOS and Android each accept only

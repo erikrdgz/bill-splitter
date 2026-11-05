@@ -392,7 +392,7 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
 
     get split_url(split)
 
-    assert_select "button", text: "I paid", count: 0
+    assert_select "summary .paid-confirm-closed", text: "I paid", count: 0
     assert_select "ol#requests > li", count: 3
   end
 

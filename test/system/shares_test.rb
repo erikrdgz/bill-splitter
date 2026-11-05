@@ -14,7 +14,9 @@ class SharesTest < ApplicationSystemTestCase
     visit share_path(splits(:dinner).share_token)
 
     within "##{dom_id(participants(:dinner_marissa))}" do
-      accept_confirm(/Mark Marissa as paid/) { click_on "I paid" }
+      find("summary", text: "I paid").click
+      assert_text "Mark Marissa as paid?"
+      click_on "Yes, I paid"
     end
 
     # The row is replaced in place by a Turbo Stream — no page reload.
@@ -26,7 +28,9 @@ class SharesTest < ApplicationSystemTestCase
     visit share_path(splits(:dinner).share_token)
 
     within "##{dom_id(participants(:dinner_marissa))}" do
-      dismiss_confirm { click_on "I paid" }
+      find("summary", text: "I paid").click
+      find("summary", text: "Not yet").click
+      assert_no_button "Yes, I paid"
     end
 
     assert_text "Still owed\n$100.00"
@@ -37,11 +41,12 @@ class SharesTest < ApplicationSystemTestCase
     visit share_path(splits(:dinner).share_token)
 
     within "##{dom_id(participants(:dinner_marissa))}" do
-      accept_confirm { click_on "I paid" }
+      find("summary", text: "I paid").click
+      click_on "Yes, I paid"
     end
 
     assert_selector "##{dom_id(participants(:dinner_marissa))}", text: /Paid/
-    assert_selector "##{dom_id(participants(:dinner_marcus))} button", text: "I paid"
+    assert_selector "##{dom_id(participants(:dinner_marcus))} summary", text: "I paid"
   end
 
   test "when everybody has paid the page says so" do
@@ -50,7 +55,7 @@ class SharesTest < ApplicationSystemTestCase
     visit share_path(splits(:dinner).share_token)
 
     assert_text "Everyone has paid."
-    assert_no_button "I paid"
+    assert_no_selector "summary", text: "I paid"
   end
 
   test "a wrong link is a not-found page, not somebody else's bill" do
@@ -78,7 +83,7 @@ class SharesTest < ApplicationSystemTestCase
   test "the organizer's page does not offer to pay for people" do
     open_editor_and_share
 
-    assert_no_button "I paid"
+    assert_no_selector "summary", text: "I paid"
     assert_selector "#requests > li", count: 3
   end
 

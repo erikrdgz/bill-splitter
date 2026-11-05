@@ -125,6 +125,18 @@
   .picker-result:hover { color: var(--color-accent); }
   .summary-total { margin: 24px 0 30px; display: flex; flex-direction: column; gap: 6px; color: var(--color-muted); font-size: 13px; }
   .summary-total .tabular-nums { font-size: clamp(36px, 7vw, 58px); letter-spacing: -2px; color: #f3f7f5; }
+  .payment-card { display: grid; gap: 12px; }
+  .payment-row-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .payment-row-figures { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; }
+  /* The open state reads top to bottom: question, confirm, then the way out. */
+  .paid-confirm { display: flex; flex-direction: column; gap: 10px; }
+  .paid-confirm > summary { width: 100%; list-style: none; cursor: pointer; }
+  .paid-confirm > summary::-webkit-details-marker { display: none; }
+  .paid-confirm[open] > summary { order: 2; }
+  .paid-confirm .paid-confirm-open, .paid-confirm[open] .paid-confirm-closed { display: none; }
+  .paid-confirm[open] .paid-confirm-open { display: inline; }
+  .paid-confirm-panel { display: grid; gap: 10px; }
+  .paid-confirm-panel form { margin: 0; }
   .payment-name { display: flex; align-items: center; gap: 10px; min-width: 0; overflow-wrap: anywhere; }
   .history-card { background: var(--color-surface); border-radius: 18px; padding: 4px 20px; border: 0; }
   .history-card:hover { background: #212125; }
@@ -156,7 +168,6 @@
     .participant-figures [data-split-logic-target=percentage] { font-size: 10px; }
     .participant-name-link { font-size: 13px; }
     .participant-name-link .avatar { width: 30px; height: 30px; }
-    .payment-card > div:first-child { flex-wrap: wrap; }
   }
   @media (prefers-reduced-motion: no-preference) {
     button, input[type=submit], a { transition: background-color .15s, color .15s, filter .15s; }

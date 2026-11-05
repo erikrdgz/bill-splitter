@@ -34,7 +34,7 @@ class SharesControllerTest < ActionDispatch::IntegrationTest
   test "the share page offers I paid on every unpaid row" do
     get share_url(splits(:dinner).share_token)
 
-    assert_select "button", text: "I paid", count: 3
+    assert_select "summary .paid-confirm-closed", text: "I paid", count: 3
     assert_select "#owed", text: /\$100\.00/
   end
 
@@ -43,7 +43,7 @@ class SharesControllerTest < ActionDispatch::IntegrationTest
 
     get share_url(splits(:dinner).share_token)
 
-    assert_select "button", text: "I paid", count: 2
+    assert_select "summary .paid-confirm-closed", text: "I paid", count: 2
     assert_select "##{ActionView::RecordIdentifier.dom_id(participants(:dinner_marissa))}",
                   text: /Paid/
     assert_select "#owed", text: /\$66\.66/
@@ -55,7 +55,7 @@ class SharesControllerTest < ActionDispatch::IntegrationTest
     get share_url(splits(:dinner).share_token)
 
     assert_select "#owed", text: /Everyone has paid/
-    assert_select "button", text: "I paid", count: 0
+    assert_select "summary .paid-confirm-closed", text: "I paid", count: 0
   end
 
   # The share token is the only secret, so it must not be guessable from the id.

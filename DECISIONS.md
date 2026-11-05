@@ -1123,3 +1123,20 @@ first visit, so every visitor still gets a full contact list. The numbers are fi
 numbers and every request is a `sms:` link that opens the visitor's own messages app, so the site
 itself never sends anything. A one-line note in the layout says so. Action Cable uses the
 in-process adapter because every Turbo Stream comes back in an HTTP response; no Redis is needed.
+
+## "I paid" confirms with a <details> element, not turbo_confirm
+
+`turbo_confirm` asks the browser for a native `confirm()` popup. In-app browsers (a link opened
+from Instagram, or an embedded preview) block those popups and quietly answer "no", so the tap
+did nothing and nothing told the friend why. The row now uses a plain `<details>`: "I paid" opens
+a short question and a "Yes, I paid" button, and "Not yet" closes it again. It needs no
+JavaScript, so it works in every browser, and the POST and Turbo Stream behind it are unchanged.
+The row was also restacked: name and amount on one line, then the pay button, then "I paid",
+which is the order a friend does things in.
+
+## Each text now ends with the share link
+
+The individual text only carried the Venmo or Cash App link, so a friend who never saw the group
+message had no way to reach "I paid". `PaymentText` now takes the share URL and appends it. The
+URL is passed in from the view instead of built in the model, because building a URL needs the
+request's host and a plain Ruby model should not reach for the request.

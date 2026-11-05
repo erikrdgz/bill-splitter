@@ -13,6 +13,12 @@ class PaymentTextTest < ActiveSupport::TestCase
                  "https://venmo.com/erik-r?amount=33.34&note=Dinner+%26+drinks&txn=pay", text.body
   end
 
+  test "the body ends with the share page so the friend can mark themselves paid" do
+    text = build(method: "venmo", phone: "5555550101", share_url: "https://example.com/s/abc")
+
+    assert text.body.end_with?(" Then tap I paid here: https://example.com/s/abc")
+  end
+
   test "the sms link is encoded so the link inside the message survives" do
     url = build(method: "cash_app", phone: "5555550101").sms_url
 
@@ -31,9 +37,9 @@ class PaymentTextTest < ActiveSupport::TestCase
 
   private
 
-  def build(method:, phone: nil, person: true, profile: @profile)
+  def build(method:, phone: nil, person: true, profile: @profile, share_url: nil)
     participant = Participant.new(position: 1, amount_cents: 3334, payment_method: method,
                                   person: (Person.new(name: "Maya Chen", phone_number: phone) if person))
-    PaymentText.new(participant: participant, split: @split, payment_profile: profile)
+    PaymentText.new(participant: participant, split: @split, payment_profile: profile, share_url: share_url)
   end
 end

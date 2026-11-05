@@ -1,7 +1,8 @@
 <%# One unpaid person on the "Send requests" screen. The single action is a text
     to their phone containing a pay link to the organizer; whatever stops that
     from working is said in words instead of leaving a dead button. %>
-<% text = PaymentText.new(participant: participant, split: split, payment_profile: payment_profile) %>
+<% text = PaymentText.new(participant: participant, split: split, payment_profile: payment_profile,
+                       share_url: share_url(split.share_token)) %>
 <li id="<%= dom_id(participant, :request) %>" class="request-card">
   <div class="request-person">
     <%= render "shared/avatar", person: participant.person, name: participant.display_name, small: true %>
