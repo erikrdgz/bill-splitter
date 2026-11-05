@@ -212,3 +212,91 @@ test/system`, failing CI on the very first push.
 Committing the empty directory makes the glob find nothing and pass. The first real system test
 arrives with the first screen in step 3; writing one now, with no route to visit, would have
 been a test of nothing.
+
+## Step 3 — Quick split screen
+
+### `form_with scope: :split`, not `model: @split`
+
+There is no record behind this form. The two fields are an amount in dollars and a head count,
+and neither is a column on `splits` — the server turns them into `total_cents` and a set of
+participants when the split is created. `model:` would make `form_with` ask a `Split` for an
+`amount` it does not have.
+
+**Alternative:** virtual `attr_accessor :amount, :people_count` on `Split` so `model:` works.
+Rejected for now: that is step 4's parsing problem, and adding writers before anything reads
+them is speculative.
+
+### The limits reach the browser as Stimulus values, never as a second copy
+
+`SplitsController#new` reads `SplitMath::PEOPLE_RANGE` and `SplitMath::MAXIMUM_TOTAL_CENTS` and
+hands them to the view, which renders them as `data-quick-split-logic-*-value` attributes.
+
+**Why:** the spec says the browser mirrors the rules for instant feedback and the server has
+the final say. Mirroring is fine; a second definition is not. If "2 to 20" were typed into the
+JavaScript as well, the day somebody changes the Ruby constant is the day the stepper and the
+validation start disagreeing. There is a controller test asserting the attributes match the
+constants, so that drift fails the build.
+
+### Markup stays in ERB, even the rows JavaScript adds
+
+The share row is `_share_row.html.erb`. The server renders the rows that exist on load, and
+renders the same partial once more inside a `<template>`. `QuickSplitLogic` clones that
+template for rows the stepper adds.
+
+**Why:** CLAUDE.md says the server renders HTML. A Stimulus controller building `<li>` elements
+with `createElement` would put markup in two languages and guarantee they drift apart at the
+design pass. Cloning a template keeps every class name in the ERB.
+
+### A text field with `inputmode="decimal"`, not a number field, for money
+
+It brings up the numeric keyboard on a phone, and it hands `QuickSplitLogic` the raw string so
+the controller can parse digits itself. A number input would hand over a float.
+
+### No float touches money in JavaScript either
+
+`#amountInCents` splits the typed string on the decimal point and builds an integer; the
+display is rebuilt from `Math.floor(cents / 100)` and `cents % 100`. `parseFloat` and
+`(cents / 100).toFixed(2)` are both absent on purpose — the same rule as the Ruby side, kept
+honestly rather than just where it is easy.
+
+### An out-of-range head count is used immediately but corrected only on commit
+
+Someone reaching for 12 types "1" first. Clamping on every keystroke would snap that to the
+minimum of 2 and fight them. So the shares recompute with the clamped count straight away,
+while the field itself is normalised on `change` — when they commit the value by leaving the
+field.
+
+**The cost:** for a moment the field and the list disagree. That is the lesser evil, and there
+is a system test for the whole sequence including the correction on blur.
+
+### Rows are added and removed, not rebuilt
+
+`#matchRowCount` appends or removes only the difference. Rebuilding the list on every keystroke
+would make the `aria-live="polite"` region re-announce all twenty rows each time a digit is
+typed, which is worse than useless for a screen reader.
+
+### Stepper buttons disable at the limits
+
+The spec lists "2 people (minimum)" and "20 people (maximum)" as states to design. A disabled
+button says so without a chip, a pill, or an error message — which the design constraints rule
+out anyway.
+
+### `Capybara.enable_aria_label = true`
+
+The stepper buttons are a "+" and a "−", so their accessible name comes from `aria-label`.
+Capybara ignores `aria-label` by default, which left the buttons unfindable and three system
+tests failing. Enabling it means the tests locate those buttons exactly the way a screen reader
+would — so the accessible name is now covered by tests instead of being decoration nobody
+checks.
+
+### System tests run at 375 x 812
+
+The spec designs mobile-first at 375 px. Driving the tests at a desktop width would let a
+cramped phone layout pass unnoticed.
+
+### "Save and add names" posts to an action that does not exist yet
+
+The button is on the screen because the spec's screen table requires it, but
+`SplitsController#create` arrives in step 4. Until then, clicking it raises
+`AbstractController::ActionNotFound`. This is a deliberate one-step gap, written down here so
+it is a known edge and not a surprise.

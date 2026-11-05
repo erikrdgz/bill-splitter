@@ -1,0 +1,11 @@
+<%# One person's share on the quick split screen. Rendered by the server for the
+    rows that exist when the page loads, and cloned by QuickSplitLogic from the
+    <template> below it for the rows the stepper adds. Either way the markup
+    lives here, in ERB, and not in JavaScript.
+
+    The em dash is the "no amount yet" state. tabular-nums keeps the figures the
+    same width so the column does not jitter while the organizer types. %>
+<li class="flex items-baseline justify-between gap-4 border-t border-black/20 py-3">
+  <span data-share-row-name><%= "Person #{position}" %></span>
+  <span class="font-medium tabular-nums" data-share-row-amount>&mdash;</span>
+</li>

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <title><%= content_for(:title) || "Bill Splitter" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -11,20 +11,18 @@
 
     <%= yield :head %>
 
-    <%# Enable PWA manifest for installable apps (make sure to enable in config/routes.rb too!) %>
-    <%#= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
-
     <link rel="icon" href="/icon.png" type="image/png">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/icon.png">
 
-    <%# Includes all stylesheet files in app/assets/stylesheets %>
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
   </head>
 
-  <body>
-    <main class="container mx-auto mt-28 px-5 flex">
+  <%# Mobile-first: one readable column that fills a 375 px phone and centres
+      itself on a desktop. Black and white only until the design pass lands. %>
+  <body class="bg-white text-black antialiased">
+    <main class="mx-auto w-full max-w-md px-4 py-10">
       <%= yield %>
     </main>
   </body>
