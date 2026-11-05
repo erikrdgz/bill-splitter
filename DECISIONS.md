@@ -909,15 +909,29 @@ It now springs shut after five seconds. The timer starts in `reveal`, and is can
 `close`, by the start of a fresh drag, and by `disconnect` — the last so a pending timer never
 wakes up holding a card that has left the page.
 
-### It never closes under a keyboard user
+### Nothing keeps it open but a full swipe or a tap
 
-`ArrowLeft` reveals the card *and focuses the delete button*. Closing on a timer there would
-pull focus out from under somebody mid-decision, and could leave their next keypress landing
-somewhere else entirely. So when the timeout fires while focus is still inside the card, it
-re-arms instead of closing, and only closes once they move on.
+The first version carved out an exception: if focus was inside the card, the timer re-armed
+instead of closing, on the theory that closing under a keyboard user would move focus
+mid-decision.
 
-This is the kind of thing that works fine for a thumb and is hostile to everyone else, which
-is why there is a test for it.
+That exception broke the feature outright. The card is `tabindex="0"`, so a real pointerdown
+focuses it — meaning after any genuine swipe the card held focus and the timer re-armed
+forever. Verified in a browser: still open at eight seconds.
+
+The rule is the one that was asked for and no more: five seconds, closed, unless a full swipe
+or a tap on the delete button is already taking the row away. Closing hides the delete button,
+so if it happens to hold focus the card takes focus back — a one-line consequence of closing,
+not a reason to skip it.
+
+### The test helper was lying
+
+None of this showed up in the tests because the synthetic `PointerEvent`s the swipe helper
+dispatches do not move focus, while a real pointerdown does. The helper now calls `card.focus()`
+first, so it reproduces the one property of real input that the bug depended on.
+
+Worth remembering: a hand-rolled gesture helper is a model of the real thing, and a bug that
+lives in the gap between them is invisible to every test built on it.
 
 ### Five seconds is a Stimulus value, not a constant
 

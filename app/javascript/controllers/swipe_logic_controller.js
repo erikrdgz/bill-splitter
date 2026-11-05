@@ -117,14 +117,19 @@ export default class extends Controller {
     this.#cancelAutoClose()
     if (this.revealTimeoutValue <= 0) return
 
-    this.autoCloseTimer = setTimeout(() => {
-      // Never shut under a keyboard user: ArrowLeft reveals and then focuses
-      // the delete button, and pulling it out from under them would move focus
-      // mid-decision. Wait again instead, and close once they move on.
-      if (this.element.contains(document.activeElement)) return this.#startAutoClose()
+    this.autoCloseTimer = setTimeout(() => this.#autoClose(), this.revealTimeoutValue)
+  }
 
-      this.close()
-    }, this.revealTimeoutValue)
+  // Only a full swipe or a tap on the delete button keeps a revealed card open,
+  // and both of those are on their way to deleting it. Everything else closes.
+  #autoClose() {
+    // close() hides the delete button, so if it is holding focus, hand focus
+    // back to the card rather than letting it fall to the body.
+    const holdsFocus = this.element.contains(document.activeElement)
+
+    this.close()
+
+    if (holdsFocus) this.element.focus()
   }
 
   #cancelAutoClose() {

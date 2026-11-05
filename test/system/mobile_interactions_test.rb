@@ -106,9 +106,11 @@ class MobileInteractionsTest < ApplicationSystemTestCase
     assert_text "2 people"
   end
 
-  # ArrowLeft reveals and focuses the delete button. Closing under a keyboard
-  # user would move focus out from under a decision they are still making.
-  test "a revealed card stays open while the keyboard is inside it" do
+  # ArrowLeft reveals the card and focuses the delete button. The timer still
+  # closes it — nothing but a full swipe or a tap keeps it open — but closing
+  # hides the focused button, so focus is handed back to the card rather than
+  # dropped on the body.
+  test "a card revealed by the keyboard also springs back, without stranding focus" do
     visit root_path
     set_people_count(2)
     card = all("[data-quick-split-logic-target=shares] > li").last
@@ -119,10 +121,10 @@ class MobileInteractionsTest < ApplicationSystemTestCase
     assert_selector "[data-swipe-open=true]"
     assert_equal "Remove Person 2", page.evaluate_script("document.activeElement.getAttribute('aria-label')")
 
-    sleep 0.6 # comfortably past the shortened timeout
+    assert_eventually("the card never sprang back") { card["data-swipe-open"] == "false" }
 
-    assert_equal "true", card["data-swipe-open"]
-    within(card) { assert_button "Remove Person 2" }
+    assert_equal "LI", page.evaluate_script("document.activeElement.tagName")
+    assert_text "2 people"
   end
 
   test "the timer never interrupts a delete that was actually tapped" do
@@ -275,6 +277,9 @@ class MobileInteractionsTest < ApplicationSystemTestCase
     execute_script(<<~JS, card, fraction)
       const [card, fraction] = arguments
       card.setPointerCapture = () => {}
+      // A real pointerdown focuses the card: it has tabindex="0". Synthetic
+      // events do not, and a helper that skips this hides focus-dependent bugs.
+      card.focus()
       const start = card.clientWidth - 4
       card.dispatchEvent(new PointerEvent('pointerdown', {bubbles: true, clientX: start, clientY: 50, pointerId: 1}))
       card.dispatchEvent(new PointerEvent('pointermove', {bubbles: true, clientX: start - card.clientWidth * fraction, clientY: 52, pointerId: 1}))
